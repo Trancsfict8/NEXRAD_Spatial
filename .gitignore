@@ -21,3 +21,4 @@ tmp
 /enc_temp_folder
 /Source/OpenStorm/Radar/Deps/hdf5
 /Plugins/UnrealHDF5
+/Plugins/VarjoOpenXR

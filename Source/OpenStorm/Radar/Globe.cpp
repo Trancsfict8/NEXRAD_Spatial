@@ -73,19 +73,19 @@ SimpleVector3<> Globe::GetPointScaledDegrees(double latitudeDegrees, double long
 
 SimpleVector3<> Globe::GetLocation(SimpleVector3<> point){
 	SimpleVector3<> vector = SimpleVector3<>(point);
-	vector.Add(center);
+	vector.Subtract(center);
 	vector.RotateAroundX(-rotationAroundX);
 	vector.RectangularToSpherical();
 	vector.radius() -= surfaceRadius;
 	vector.theta() = -vector.theta() + M_PI / 2.0 - rotationAroundPolls;
-	vector.phi() = -vector.phi() + M_PI * 1.5;
+	vector.phi() = -vector.phi() + M_PI / 2.0;
 	return vector;
 	return SimpleVector3<>();
 }
 
 SimpleVector3<> Globe::GetLocationScaled(SimpleVector3<> point){
 	SimpleVector3<> vector = SimpleVector3<>(point);
-	vector.Multiply(-1.0 / scale);
+	vector.Multiply(1.0 / scale);
 	vector = GetLocation(vector);
 	return vector;
 }

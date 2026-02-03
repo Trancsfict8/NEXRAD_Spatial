@@ -24,6 +24,7 @@
 #undef min
 #else
 #include <dirent.h>
+#include <unistd.h>
 #endif
 
 

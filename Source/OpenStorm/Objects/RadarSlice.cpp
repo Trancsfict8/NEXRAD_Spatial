@@ -182,6 +182,12 @@ void ARadarSlice::GenerateMesh(){
 		// SimpleVector3<float> testVec = SimpleVector3<float>(1,2,3);
 		// testVec.RectangularToSpherical();
 		// testVec.SphericalToRectangular();
+		// testVec = globe->GetLocationScaled(testVec);
+		// testVec = globe->GetPointScaled(testVec);
+		// testVec = globe->GetLocationScaled(testVec);
+		// testVec = globe->GetPoint(testVec);
+		// testVec = globe->GetLocation(testVec);
+		// testVec = globe->GetPointScaled(testVec);
 		// fprintf(stderr, "test %f %f %f \n", testVec.x, testVec.y, testVec.z);
 		
 		for (int x = 0; x <= divisions; x++) {
