@@ -30,9 +30,11 @@ RadarData* RadarProductStormRelativeVelocity::deriveVolume(std::map<RadarData::V
 	int radiusSectionSize = 32;
 	int radiusSections = radarData->radiusBufferCount / radiusSectionSize + 1;
 	
-	float* bins = new float[thetaSections * radiusSections]{};
+	int binsPerSweep = thetaSections * radiusSections;
+	int totalBins = binsPerSweep * radarData->sweepBufferCount;
+	float* bins = new float[totalBins]{};
 	//std::fill(bins, bins + (thetaSections * radiusSections), 0.0f);
-	float* binCounts = new float[thetaSections * radiusSections]{};
+	float* binCounts = new float[totalBins]{};
 	//std::fill(binCounts, binCounts + (thetaSections * radiusSections), 0.0f);
 	
 	// read radar data to fill bins
@@ -40,9 +42,11 @@ RadarData* RadarProductStormRelativeVelocity::deriveVolume(std::map<RadarData::V
 		for(int theta = 1; theta < radarData->thetaBufferCount + 2; theta++){
 			float* raySrc = radarDataSrc->buffer + (radarData->thetaBufferSize * theta + radarData->sweepBufferSize * sweep);
 			int thetaBin = (theta - 1) / (float)radarData->thetaBufferCount * thetaSections;
+			thetaBin *= radiusSections;
+			thetaBin += sweep * binsPerSweep;
 			if (!radarData->rayInfo[sweep * (radarData->thetaBufferCount + 2) + theta].interpolated) {
 				for(int radius = 5; radius < radarData->radiusBufferCount; radius++){
-					int binIndex = thetaBin * radiusSections + radius / radiusSectionSize;
+					int binIndex = thetaBin + radius / radiusSectionSize;
 					float value = raySrc[radius];
 					if(value != 0){
 						bins[binIndex] += value;
@@ -54,12 +58,9 @@ RadarData* RadarProductStormRelativeVelocity::deriveVolume(std::map<RadarData::V
 	}
 	
 	// average bins
-	for(int theta = 0; theta < thetaSections; theta++){
-		for(int radius = 0; radius < radiusSections; radius++){
-			int binIndex = theta * radiusSections + radius;
-			if(binCounts[binIndex] > 0){
-				bins[binIndex] /= binCounts[binIndex];
-			}
+	for(int binIndex = 0; binIndex < totalBins; binIndex++){
+		if(binCounts[binIndex] > 0){
+			bins[binIndex] /= binCounts[binIndex];
 		}
 	}
 	delete[] binCounts;
@@ -71,10 +72,12 @@ RadarData* RadarProductStormRelativeVelocity::deriveVolume(std::map<RadarData::V
 			float* raySrc = radarDataSrc->buffer + (radarData->thetaBufferSize * theta + radarData->sweepBufferSize * sweep);
 			float thetaBin = (theta - 1) / (float)radarData->thetaBufferCount * thetaSections;
 			if (!radarData->rayInfo[sweep * (radarData->thetaBufferCount + 2) + theta].interpolated) {
+				int binIndexTheta1 = modulo((int)std::floor(thetaBin - 0.5f), thetaSections) * radiusSections;
+				binIndexTheta1 += sweep * binsPerSweep;
+				int binIndexTheta2 = modulo((int)std::floor(thetaBin + 0.5f), thetaSections) * radiusSections;
+				binIndexTheta2 += sweep * binsPerSweep;
 				for(int radius = 0; radius < radarData->radiusBufferCount; radius++){
 					// interpolate bins
-					int binIndexTheta1 = modulo((int)std::floor(thetaBin - 0.5f), thetaSections) * radiusSections;
-					int binIndexTheta2 = modulo((int)std::floor(thetaBin + 0.5f), thetaSections) * radiusSections;
 					int binIndexRadius1 = std::max((int)(radius / (float)radiusSectionSize - 0.5f), 0);
 					int binIndexRadius2 = std::min((int)(radius / (float)radiusSectionSize + 0.5f), radiusSections);
 					float bin11 = bins[binIndexTheta1 + binIndexRadius1];
