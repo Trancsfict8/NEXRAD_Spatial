@@ -11,6 +11,7 @@
 #include "Materials/Material.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "../Radar/SimpleVector3.h"
+#include "../Radar/Globe.h"
 #include "../UI/ImGuiController.h"
 #include "../UI/Slate/SlateUI.h"
 
@@ -62,6 +63,13 @@ void ARadarViewPawn::BeginPlay()
 		callbackIds.push_back(globalState->RegisterEvent("Teleport", [this](std::string stringData, void* extraData) {
 			SimpleVector3<float>* vec = (SimpleVector3<float>*)extraData;
 			SetActorLocation(FVector(vec->x, vec->y, vec->z));
+		}));
+		
+		callbackIds.push_back(globalState->RegisterEvent("TeleportCamera", [this, globalState](std::string stringData, void* extraData) {
+			if (globalState->globe != NULL) {
+				SimpleVector3<double> targetPos = globalState->globe->GetPointScaledDegrees(globalState->teleportLatitude, globalState->teleportLongitude, globalState->teleportAltitude);
+				SetActorLocation(FVector(targetPos.x, targetPos.y, targetPos.z));
+			}
 		}));
 	}
 }

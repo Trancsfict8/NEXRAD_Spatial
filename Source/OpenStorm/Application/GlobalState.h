@@ -71,12 +71,17 @@ public:
 	float fadeSpeed = 0.0f; // speed of fade
 	float moveSpeed = 500.0f; // speed of movement
 	float rotateSpeed = 200.0f; // speed of rotation
+	float teleportLatitude = 0.0f; // target latitude for jumping
+	float teleportLongitude = 0.0f; // target longitude for jumping
+	float teleportAltitude = 304.8f; // target altitude for jumping (default 1000 ft)
 	float guiScale = 1.0f; // scale of gui for high dpi displays
 	float quality = 0.0f; // a float representing quality with 0 being normal
 	float qualityCustomStepSize = 5.0f; // if quality is set to 10 this value is used
 	float verticalScale = 1.0f; // multiply vertical scale
 	float audioControlMultiplier = 5.0f;
 	bool enableMap = true; // if the globe should be rendered
+	bool realLifeScale = false; // toggle for true 1:1 real world scaling
+	float customMapScale = 0.01f; // custom scale when not in real life scale
 	bool enableMapTiles = true; // if tiles should be shown
 	bool enableMapGIS = true; // if GIS objects should be shown
 	float mapBrightness = 0.2f; // brightness of map texture

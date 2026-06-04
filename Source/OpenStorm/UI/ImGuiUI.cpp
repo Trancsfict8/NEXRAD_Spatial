@@ -431,6 +431,51 @@ void ImGuiUI::MainUI()
 				
 				SetCustomInputTooltip("How sensitive the mouse or controller is to rotation");
 				CustomFloatInput("Rotation Speed", 0.0f, 300.0f, &globalState.rotateSpeed, &globalState.defaults->rotateSpeed);
+				
+				ImGui::Separator();
+				ImGui::Text("GPS Teleport");
+				SetCustomInputTooltip("Latitude coordinate to jump to");
+				CustomFloatInput("Target Latitude", -90.0f, 90.0f, &globalState.teleportLatitude, &globalState.defaults->teleportLatitude, CustomInput_SliderOnly);
+				SetCustomInputTooltip("Longitude coordinate to jump to");
+				CustomFloatInput("Target Longitude", -180.0f, 180.0f, &globalState.teleportLongitude, &globalState.defaults->teleportLongitude, CustomInput_SliderOnly);
+				SetCustomInputTooltip("Altitude to jump to in meters (1000 feet = ~305 meters)");
+				CustomFloatInput("Target Altitude (m)", 0.0f, 20000.0f, &globalState.teleportAltitude, &globalState.defaults->teleportAltitude, CustomInput_SliderOnly);
+				
+				if (ImGui::Button("Jump to Coordinates")) {
+					// Auto-select nearest radar station
+					NexradSites::Site* nearestSite = NULL;
+					double minDistance = 999999999.0;
+					for(int i = 0; i < NexradSites::numberOfSites; i++){
+						NexradSites::Site* site = &NexradSites::sites[i];
+						double dist = (site->latitude - globalState.teleportLatitude) * (site->latitude - globalState.teleportLatitude) + 
+						              (site->longitude - globalState.teleportLongitude) * (site->longitude - globalState.teleportLongitude);
+						if(dist < minDistance){
+							minDistance = dist;
+							nearestSite = site;
+						}
+					}
+					if(nearestSite != NULL){
+						globalState.downloadSiteId = nearestSite->name;
+						globalState.downloadData = true;
+						globalState.pollData = true;
+					}
+					
+					globalState.EmitEvent("TeleportCamera");
+				}
+				CustomTooltipForPrevious("Teleport the camera instantly to the chosen GPS coordinates");
+				
+				ImGui::SameLine();
+				if (ImGui::Button("Save as Favorite")) {
+					GlobalState::Waypoint newWaypoint = {};
+					newWaypoint.name = "Saved Location";
+					newWaypoint.latitude = globalState.teleportLatitude;
+					newWaypoint.longitude = globalState.teleportLongitude;
+					newWaypoint.altitude = globalState.teleportAltitude;
+					globalState.locationMarkers.push_back(newWaypoint);
+					globalState.EmitEvent("LocationMarkersUpdate");
+				}
+				CustomTooltipForPrevious("Save this coordinate to your Waypoints list (under Map -> Waypoints)");
+				
 				ImGui::TreePop();
 			}
 			ImGui::Separator();
@@ -602,6 +647,22 @@ void ImGuiUI::MainUI()
 			if (ImGui::TreeNodeEx("Map", ImGuiTreeNodeFlags_SpanAvailWidth)) {
 				ImGui::Checkbox("Show Map", &globalState.enableMap);
 				CustomTooltipForPrevious("Toggle entire map");
+				
+				bool scaleChanged = false;
+				scaleChanged |= ImGui::Checkbox("Real Life Scale", &globalState.realLifeScale);
+				CustomTooltipForPrevious("Set map scale to true 1:1 real world sizing (very large)");
+				if (!globalState.realLifeScale) {
+					SetCustomInputTooltip("Adjust the scale of the map");
+					scaleChanged |= CustomFloatInput("Map Scale", 0.001f, 100.0f, &globalState.customMapScale, &globalState.defaults->customMapScale);
+				}
+				if (scaleChanged && globalState.globe != NULL) {
+					globalState.globe->scale = globalState.realLifeScale ? 100.0 : globalState.customMapScale;
+					// Trigger updates for volumes and markers that rely on world coordinate projection
+					globalState.EmitEvent("UpdateVolumeParameters");
+					globalState.EmitEvent("LocationMarkersUpdate");
+					globalState.EmitEvent("TeleportCamera");
+				}
+
 				SetCustomInputTooltip("How bright the map is, increasing this makes the radar volume less visible");
 				CustomFloatInput("Map Brightness", 0.01, 1.0, &globalState.mapBrightness, &globalState.defaults->mapBrightness);
 				ImGui::Checkbox("Show Tiles", &globalState.enableMapTiles);
