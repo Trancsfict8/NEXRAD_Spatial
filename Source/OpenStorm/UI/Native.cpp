@@ -17,8 +17,8 @@ extern "C" {
 	__declspec(dllimport) HWND __stdcall GetConsoleWindow();
 	__declspec(dllimport) BOOL __stdcall AllocConsole();
 	__declspec(dllimport) HINSTANCE LoadLibraryA(const char* lpLibFileName);
-	__declspec(dllimport) HINSTANCE LoadLibraryW(const wchar_t* lpLibFileName);
-	__declspec(dllimport) BOOL FreeLibrary(HINSTANCE hLibModule);
+	//__declspec(dllimport) HINSTANCE LoadLibraryW(const wchar_t* lpLibFileName);
+	//__declspec(dllimport) BOOL FreeLibrary(HINSTANCE hLibModule);
 	__declspec(dllimport) void* GetProcAddress(HINSTANCE hModule, const char* lpProcName);
 	__declspec(dllimport) BOOL ShowWindow(HWND hWnd, int nCmdShow);
 	typedef BOOL(__stdcall* ShowWindowDef)(HWND hWnd, int nCmdShow);

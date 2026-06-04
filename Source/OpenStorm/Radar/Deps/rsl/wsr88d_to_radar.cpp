@@ -1,3 +1,5 @@
+#pragma warning(disable: 4702)
+#pragma warning(disable: 4701)
 /*
 		NASA/TRMM, Code 910.1.
 		This is the TRMM Office Radar Software Library.

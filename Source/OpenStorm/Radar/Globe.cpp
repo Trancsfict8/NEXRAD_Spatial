@@ -1,3 +1,5 @@
+#pragma warning(disable: 4702)
+#pragma warning(disable: 4701)
 #include "Globe.h"
 #define _USE_MATH_DEFINES
 #include "math.h"

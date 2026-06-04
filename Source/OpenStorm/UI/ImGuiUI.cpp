@@ -910,7 +910,7 @@ void ImGuiUI::MainUI()
 				//FAssetEditorManager::Get().OpenEditorsForAssets(assetName.c_str());
 				FString assetPath = FString(assetName.c_str());
 				//GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()->OpenEditorForAsset(assetPath);
-				UObject* foundObject = FindObject<UObject>(ANY_PACKAGE, *assetPath);
+				UObject* foundObject = FindObject<UObject>(nullptr, *assetPath);
 				if (foundObject != NULL)
 				{
 					GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()->OpenEditorForAsset(foundObject);

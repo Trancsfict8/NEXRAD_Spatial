@@ -16,6 +16,7 @@ public class OpenStorm : ModuleRules
 		PrivateDependencyModuleNames.AddRange(new string[] { "InputCore", "ImGui", "AudioCaptureCore", "ProceduralMeshComponent", "ImageWrapper", "RHI", "Json", "HTTP"});
 		
 		bEnableExceptions = true;
+		bWarningsAsErrors = false;
 		
 		// string pluginsLocation = Path.Combine(ModuleDirectory, "../../Plugins");
 		// // add UnrealHDF5 only if it exists

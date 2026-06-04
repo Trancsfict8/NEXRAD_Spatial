@@ -65,7 +65,7 @@ public:
 			hasReceivedAnyHeaders = true;
 			//fprintf(stderr, "OnHeaderReceived\n");
 		});
-		httpRequest->OnRequestProgress().BindLambda([this](FHttpRequestPtr Request, int32 BytesSent, int32 BytesReceived){
+		httpRequest->OnRequestProgress64().BindLambda([this](FHttpRequestPtr Request, uint64 BytesSent, uint64 BytesReceived){
 			// this could be problematic if the header ever gets split because this event fires before the header is parsed
 			// if the second part of the header contains a large amount of data this could fire before the second part is parsed
 			// that is probably extremely unlikely to happen though
@@ -138,9 +138,9 @@ public:
 					case EHttpRequestStatus::Failed:
 						statusString = "Failed";
 						break;
-					case EHttpRequestStatus::Failed_ConnectionError:
-						statusString = "Failed_ConnectionError";
-						break;
+					//case EHttpRequestStatus::Failed_ConnectionError:
+					//	statusString = "Failed_ConnectionError";
+					//	break;
 					case EHttpRequestStatus::Succeeded:
 						statusString = "Succeeded";
 						break;
@@ -160,7 +160,7 @@ public:
 			if(*canceled){
 				httpRequest->CancelRequest();
 				httpRequest->OnHeaderReceived().Unbind();
-				httpRequest->OnRequestProgress().Unbind();
+				httpRequest->OnRequestProgress64().Unbind();
 				httpRequest->OnProcessRequestComplete().Unbind();
 				SystemAPI::Sleep(0.02);
 				break;
