@@ -201,6 +201,7 @@ AMapMesh::AMapMesh(){
 	material = ConstructorHelpers::FObjectFinder<UMaterial>(TEXT("Material'/Game/Materials/Map.Map'")).Object;
 	materialInstance = UMaterialInstanceDynamic::Create(material, this, "MapMeshMaterialInstance");
 	proceduralMesh = CreateDefaultSubobject<UProceduralMeshComponent>("ProceduralMesh");
+	proceduralMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	proceduralMesh->bUseAsyncCooking = true;
 	RootComponent = proceduralMesh;
 }

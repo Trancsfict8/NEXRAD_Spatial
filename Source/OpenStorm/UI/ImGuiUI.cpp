@@ -663,6 +663,15 @@ void ImGuiUI::MainUI()
 					globalState.EmitEvent("TeleportCamera");
 				}
 
+				ImGui::Separator();
+				ImGui::Text("Tabletop / God's View");
+				ImGui::Checkbox("Tabletop Mode", &globalState.tabletopMode);
+				CustomTooltipForPrevious("Shrink the radar around the active station to a table-top hologram. Use the scale slider to zoom in/out.");
+				if (globalState.tabletopMode) {
+					SetCustomInputTooltip("Zoom level for tabletop view (smaller = zoomed out, larger = zoomed in)");
+					CustomFloatInput("Tabletop Scale", 0.000001f, 0.001f, &globalState.tabletopScale, &globalState.defaults->tabletopScale);
+				}
+
 				SetCustomInputTooltip("How bright the map is, increasing this makes the radar volume less visible");
 				CustomFloatInput("Map Brightness", 0.01, 1.0, &globalState.mapBrightness, &globalState.defaults->mapBrightness);
 				ImGui::Checkbox("Show Tiles", &globalState.enableMapTiles);

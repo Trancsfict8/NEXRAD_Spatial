@@ -16,6 +16,7 @@ AGISPolyline::AGISPolyline(){
 	material = ConstructorHelpers::FObjectFinder<UMaterial>(TEXT("/Script/Engine.Material'/Game/Materials/GISLine.GISLine'")).Object;
 	materialInstance = UMaterialInstanceDynamic::Create(material, this, "GISLineMaterialInstance");
 	proceduralMesh = CreateDefaultSubobject<UProceduralMeshComponent>("ProceduralMesh");
+	proceduralMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	proceduralMesh->bUseAsyncCooking = true;
 	proceduralMesh->SetMaterial(0, materialInstance);
 	RootComponent = proceduralMesh;

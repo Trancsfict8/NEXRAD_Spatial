@@ -10,6 +10,10 @@
 
 class ASlateUI;
 class AImGuiController;
+class UMotionControllerComponent;
+class UWidgetComponent;
+class UWidgetInteractionComponent;
+class UXRDeviceVisualizationComponent;
 
 UCLASS()
 class OPENSTORM_API ARadarViewPawn : public APawn
@@ -44,6 +48,12 @@ public:
 	float horizontalRotation = 0;
 	float verticalRotationAmount = 0;
 	float horizontalRotationAmount = 0;
+
+	float clickAxis = 0.0f;
+	bool bWasClicked = false;
+	void VRClickAxisFunc(float value);
+
+	bool enableMouseLook = false;
 	
 	bool isTAAEnabled = false;
 	
@@ -63,8 +73,27 @@ public:
 	void RotateMouseUD(float value);
 	void ReleaseMouse();
 	void PressMouse();
+	void VRClickPress();
+	void VRClickRelease();
+
+	void GripLeft(float value);
+	void GripRight(float value);
 	
-	
+private:
+	float leftGripState = 0.0f;
+	float rightGripState = 0.0f;
+
+	bool bWasTwoHandGripping = false;
+	float initialGripDistance = 0.0f;
+	float initialTabletopScale = 0.0f;
+	FVector initialGripMidpoint;
+	double initialTabletopCenterLat = 0.0;
+	double initialTabletopCenterLon = 0.0;
+
+	bool bWasOneHandGripping = false;
+	FVector initialOneHandPos;
+
+public:
 	UPROPERTY(EditAnywhere)
 		float moveSpeed = 300.0f;
 	UPROPERTY(EditAnywhere)
@@ -87,4 +116,22 @@ public:
 
 	UPROPERTY(EditAnywhere)
 		ASlateUI* hud = NULL;
+		
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "VR")
+	UMotionControllerComponent* leftController;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "VR")
+	UMotionControllerComponent* rightController;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "VR")
+	UXRDeviceVisualizationComponent* leftControllerVisual;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "VR")
+	UXRDeviceVisualizationComponent* rightControllerVisual;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "VR")
+	UWidgetComponent* vrMenuWidget;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "VR")
+	UWidgetInteractionComponent* widgetInteraction;
 };

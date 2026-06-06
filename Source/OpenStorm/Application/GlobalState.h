@@ -82,6 +82,10 @@ public:
 	bool enableMap = true; // if the globe should be rendered
 	bool realLifeScale = false; // toggle for true 1:1 real world scaling
 	float customMapScale = 0.01f; // custom scale when not in real life scale
+	bool tabletopMode = false; // shrink radar around active station to tabletop size
+	float tabletopScale = 0.00002f; // scale factor for tabletop mode (adjustable via controller pinch)
+	double tabletopCenterLat = 0.0; // lat of tabletop pivot (set to active station)
+	double tabletopCenterLon = 0.0; // lon of tabletop pivot
 	bool enableMapTiles = true; // if tiles should be shown
 	bool enableMapGIS = true; // if GIS objects should be shown
 	float mapBrightness = 0.2f; // brightness of map texture

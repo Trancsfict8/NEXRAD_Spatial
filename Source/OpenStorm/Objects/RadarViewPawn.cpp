@@ -12,8 +12,18 @@
 #include "Materials/MaterialInstanceDynamic.h"
 #include "../Radar/SimpleVector3.h"
 #include "../Radar/Globe.h"
+#include "../Radar/NexradSites/NexradSites.h"
 #include "../UI/ImGuiController.h"
 #include "../UI/Slate/SlateUI.h"
+#include "../UI/Slate/SVRMenuWidget.h"
+#include "Engine/Engine.h"
+#include "MotionControllerComponent.h"
+#include "XRDeviceVisualizationComponent.h"
+#include "HeadMountedDisplayFunctionLibrary.h"
+#include "Components/WidgetComponent.h"
+#include "Components/WidgetInteractionComponent.h"
+#include "Components/StaticMeshComponent.h"
+#include "Engine/StaticMesh.h"
 
 
 
@@ -33,22 +43,87 @@ ARadarViewPawn::ARadarViewPawn()
 	meshComponent->SetStaticMesh(playerMesh);
 	meshComponent->SetMaterial(0, material);
 	meshComponent->TranslucencySortPriority = 1;
+	meshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	
  	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
 	
 	camera->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
-	meshComponent->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
+	meshComponent->AttachToComponent(camera, FAttachmentTransformRules::KeepRelativeTransform);
 	
-	SetActorEnableCollision(false);
+	// Left motion controller - tracks position/rotation of left hand
+	leftController = CreateDefaultSubobject<UMotionControllerComponent>(TEXT("LeftController"));
+	leftController->MotionSource = FName("Left");
+	leftController->SetupAttachment(RootComponent);
+
+	// Visual mesh for left controller (rendered by XR runtime / OpenXR device model)
+	leftControllerVisual = CreateDefaultSubobject<UXRDeviceVisualizationComponent>(TEXT("LeftControllerVisual"));
+	leftControllerVisual->SetupAttachment(leftController);
+	leftControllerVisual->SetIsVisualizationActive(true);
+	leftControllerVisual->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	// Right motion controller
+	rightController = CreateDefaultSubobject<UMotionControllerComponent>(TEXT("RightController"));
+	rightController->MotionSource = FName("Right");
+	rightController->SetupAttachment(RootComponent);
+
+	// Visual mesh for right controller
+	rightControllerVisual = CreateDefaultSubobject<UXRDeviceVisualizationComponent>(TEXT("RightControllerVisual"));
+	rightControllerVisual->SetupAttachment(rightController);
+	rightControllerVisual->SetIsVisualizationActive(true);
+	rightControllerVisual->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }
 
 // Called when the game starts or when spawned
 void ARadarViewPawn::BeginPlay()
 {
 	Super::BeginPlay();
-	meshComponent->SetRelativeScale3D(FVector3d(0.25, 2, 2));
+	
+	UHeadMountedDisplayFunctionLibrary::SetTrackingOrigin(EHMDTrackingOrigin::Stage);
+
+	// VR Menu panel
+	vrMenuWidget = NewObject<UWidgetComponent>(this, TEXT("VRMenuWidget_Dyn"));
+	vrMenuWidget->SetupAttachment(leftController);
+	vrMenuWidget->RegisterComponent();
+	vrMenuWidget->SetDrawSize(FVector2D(1200, 1000));
+	vrMenuWidget->SetRelativeScale3D(FVector(0.04f, 0.04f, 0.04f));
+	vrMenuWidget->SetRelativeLocation(FVector(0.0f, 0.0f, 8.0f));
+	vrMenuWidget->SetRelativeRotation(FRotator(60.0f, 180.0f, 0.0f));
+	vrMenuWidget->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	vrMenuWidget->SetCollisionResponseToAllChannels(ECR_Ignore);
+	vrMenuWidget->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
+	vrMenuWidget->SetTwoSided(true);
+	vrMenuWidget->SetTickWhenOffscreen(true);
+	vrMenuWidget->SetWindowFocusable(true);
+	vrMenuWidget->SetSlateWidget(SNew(SVRMenuWidget));
+
+	// Laser pointer
+	widgetInteraction = NewObject<UWidgetInteractionComponent>(this, TEXT("WidgetInteraction_Dyn"));
+	widgetInteraction->SetupAttachment(rightController);
+	widgetInteraction->RegisterComponent();
+	widgetInteraction->TraceChannel = ECollisionChannel::ECC_Visibility;
+	widgetInteraction->InteractionSource = EWidgetInteractionSource::World;
+	widgetInteraction->InteractionDistance = 1000.0f;
+	widgetInteraction->bShowDebug = false;
+
+	// Create physical laser pointer dynamically at runtime to avoid UE5 C++ constructor corruption
+	UStaticMeshComponent* dynamicLaser = NewObject<UStaticMeshComponent>(this, TEXT("DynamicLaserMesh"));
+	dynamicLaser->SetupAttachment(rightController);
+	dynamicLaser->RegisterComponent();
+	UStaticMesh* cylMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
+	if (cylMesh) {
+		dynamicLaser->SetStaticMesh(cylMesh);
+	}
+	dynamicLaser->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	dynamicLaser->SetRelativeScale3D(FVector(0.005f, 0.005f, 5.0f));
+	dynamicLaser->SetRelativeLocation(FVector(250.0f, 0.0f, 0.0f));
+	dynamicLaser->SetRelativeRotation(FRotator(90.0f, 0.0f, 0.0f));
+	
+	// Attach the raymarching proxy mesh closely to the camera so it follows the user's head
+	// in room-scale VR. A 50cm box (0.5 scale) prevents near-clip culling but ensures the ray
+	// origin starts right at the eyes.
+	meshComponent->SetRelativeScale3D(FVector3d(0.5, 0.5, 0.5));
 	//mainVolumeRender = ARadarVolumeRender::instance;
 	mainVolumeRender = FindActor<ARadarVolumeRender>();
 	gui = FindActor<AImGuiController>();
@@ -101,6 +176,105 @@ void ARadarViewPawn::Tick(float deltaTime)
 		GlobalState* globalState = &GS->globalState;
 		moveSpeed = globalState->moveSpeed * (1 + speedBoost * 3);
 		rotateSpeed = globalState->rotateSpeed;
+
+		// --- Tabletop Mode ---
+		// When active, center globe on the active radar station and shrink to tabletop scale
+		static bool lastTabletopMode = false;
+		if (globalState->tabletopMode != lastTabletopMode) {
+			lastTabletopMode = globalState->tabletopMode;
+			if (globalState->globe != NULL) {
+				if (globalState->tabletopMode) {
+					// Look up active station location and pivot the globe to it
+					NexradSites::Site* site = NexradSites::GetSite(globalState->downloadSiteId.c_str());
+					if (site != NULL) {
+						globalState->tabletopCenterLat = site->latitude;
+						globalState->tabletopCenterLon = site->longitude;
+					} else {
+						globalState->tabletopCenterLat = globalState->teleportLatitude;
+						globalState->tabletopCenterLon = globalState->teleportLongitude;
+					}
+					globalState->globe->SetTopCoordinates(globalState->tabletopCenterLat, globalState->tabletopCenterLon);
+					globalState->globe->scale = globalState->tabletopScale;
+				} else {
+					// Restore normal scale
+					globalState->globe->scale = globalState->realLifeScale ? 100.0 : globalState->customMapScale;
+				}
+				globalState->EmitEvent("UpdateVolumeParameters");
+				globalState->EmitEvent("LocationMarkersUpdate");
+			}
+		}
+		// In tabletop mode allow real-time scale adjustment via tabletopScale slider	
+	if (widgetInteraction) {
+		if (clickAxis > 0.5f && !bWasClicked) {
+			bWasClicked = true;
+			widgetInteraction->PressPointerKey(EKeys::LeftMouseButton);
+		} else if (clickAxis < 0.3f && bWasClicked) {
+			bWasClicked = false;
+			widgetInteraction->ReleasePointerKey(EKeys::LeftMouseButton);
+		}
+	}
+
+	if (globalState->tabletopMode && globalState->globe != NULL) {
+		bool bLeftGripped = leftGripState > 0.5f;
+			bool bRightGripped = rightGripState > 0.5f;
+
+			if (bLeftGripped && bRightGripped) {
+				float currentDist = FVector::Dist(leftController->GetComponentLocation(), rightController->GetComponentLocation());
+				FVector currentMidpoint = (leftController->GetComponentLocation() + rightController->GetComponentLocation()) * 0.5f;
+				
+				if (!bWasTwoHandGripping) {
+					bWasTwoHandGripping = true;
+					bWasOneHandGripping = false;
+					initialGripDistance = currentDist;
+					initialTabletopScale = globalState->tabletopScale;
+					initialGripMidpoint = currentMidpoint;
+					initialTabletopCenterLat = globalState->tabletopCenterLat;
+					initialTabletopCenterLon = globalState->tabletopCenterLon;
+				} else {
+					// Zoom based on distance spread
+					if (initialGripDistance > 1.0f) {
+						float scaleFactor = currentDist / initialGripDistance;
+						globalState->tabletopScale = FMath::Clamp(initialTabletopScale * scaleFactor, 0.0000001f, 0.01f);
+					}
+					
+					// Pan based on midpoint drag
+					FVector deltaPan = currentMidpoint - initialGripMidpoint;
+					float degreesPerCm = 0.00001f / globalState->tabletopScale; 
+					globalState->tabletopCenterLat = initialTabletopCenterLat - (deltaPan.X * degreesPerCm);
+					globalState->tabletopCenterLon = initialTabletopCenterLon - (deltaPan.Y * degreesPerCm);
+					
+					globalState->globe->SetTopCoordinates(globalState->tabletopCenterLat, globalState->tabletopCenterLon);
+					globalState->EmitEvent("UpdateVolumeParameters");
+					globalState->EmitEvent("LocationMarkersUpdate");
+				}
+			} else if (bLeftGripped || bRightGripped) {
+				bWasTwoHandGripping = false;
+				UMotionControllerComponent* activeController = bLeftGripped ? leftController : rightController;
+				FVector currentPos = activeController->GetComponentLocation();
+				
+				if (!bWasOneHandGripping) {
+					bWasOneHandGripping = true;
+					initialOneHandPos = currentPos;
+					initialTabletopCenterLat = globalState->tabletopCenterLat;
+					initialTabletopCenterLon = globalState->tabletopCenterLon;
+				} else {
+					// Pan based on single hand drag
+					FVector deltaPan = currentPos - initialOneHandPos;
+					float degreesPerCm = 0.00001f / globalState->tabletopScale; 
+					globalState->tabletopCenterLat = initialTabletopCenterLat - (deltaPan.X * degreesPerCm);
+					globalState->tabletopCenterLon = initialTabletopCenterLon - (deltaPan.Y * degreesPerCm);
+					
+					globalState->globe->SetTopCoordinates(globalState->tabletopCenterLat, globalState->tabletopCenterLon);
+					globalState->EmitEvent("UpdateVolumeParameters");
+					globalState->EmitEvent("LocationMarkersUpdate");
+				}
+			} else {
+				bWasTwoHandGripping = false;
+				bWasOneHandGripping = false;
+			}
+
+			globalState->globe->scale = globalState->tabletopScale;
+		}
 		bool shouldEnableTAA = globalState->temporalAntiAliasing;
 		FVector location = GetActorLocation();
 		location += camera->GetForwardVector() * forwardMovement * deltaTime * moveSpeed;
@@ -197,6 +371,12 @@ void ARadarViewPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 	PlayerInputComponent->BindAction("MouseButton", IE_Released, this, &ARadarViewPawn::ReleaseMouse);
 	PlayerInputComponent->BindAction("MouseButton", IE_Pressed, this, &ARadarViewPawn::PressMouse);
 	
+	PlayerInputComponent->BindAction("VRClick", IE_Pressed, this, &ARadarViewPawn::VRClickPress);
+	PlayerInputComponent->BindAction("VRClick", IE_Released, this, &ARadarViewPawn::VRClickRelease);
+
+	PlayerInputComponent->BindAxis("VRGripLeft", this, &ARadarViewPawn::GripLeft);
+	PlayerInputComponent->BindAxis("VRGripRight", this, &ARadarViewPawn::GripRight);
+	PlayerInputComponent->BindAxis("VRClickAxis", this, &ARadarViewPawn::VRClickAxisFunc);
 }
 
 void ARadarViewPawn::MoveFB(float value)
@@ -271,6 +451,31 @@ void ARadarViewPawn::PressMouse() {
 	if (gui != NULL) {
 		gui->LockMouse();
 	}
+}
+
+void ARadarViewPawn::VRClickPress() {
+	if (widgetInteraction) {
+		UE_LOG(LogTemp, Warning, TEXT("VR Trigger Pressed - Clicking UI"));
+		widgetInteraction->PressPointerKey(EKeys::LeftMouseButton);
+	}
+}
+
+void ARadarViewPawn::VRClickRelease() {
+	if (widgetInteraction) {
+		widgetInteraction->ReleasePointerKey(EKeys::LeftMouseButton);
+	}
+}
+
+void ARadarViewPawn::VRClickAxisFunc(float value) {
+	clickAxis = value;
+}
+
+void ARadarViewPawn::GripLeft(float value) {
+	leftGripState = value;
+}
+
+void ARadarViewPawn::GripRight(float value) {
+	rightGripState = value;
 }
 
 
