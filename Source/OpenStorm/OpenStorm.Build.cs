@@ -16,6 +16,7 @@ public class OpenStorm : ModuleRules
 		PrivateDependencyModuleNames.AddRange(new string[] { "InputCore", "ImGui", "AudioCaptureCore", "ProceduralMeshComponent", "ImageWrapper", "RHI", "Json", "HTTP", "XRBase" });
 		
 		bEnableExceptions = true;
+		bUseRTTI = true;
 		bWarningsAsErrors = false;
 		
 		// string pluginsLocation = Path.Combine(ModuleDirectory, "../../Plugins");

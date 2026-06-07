@@ -35,6 +35,9 @@ ALocationMarker::ALocationMarker()
 	
 	
 	collisionComponent = CreateDefaultSubobject<UBoxComponent>(TEXT("Text Collision"));
+	collisionComponent->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	collisionComponent->SetCollisionObjectType(ECC_WorldDynamic);
+	collisionComponent->SetCollisionResponseToAllChannels(ECR_Ignore);
 	collisionComponent->SetCollisionResponseToChannel(ECC_Camera, ECR_Block);
 	collisionComponent->SetActive(false);
 	collisionComponent->SetBoxExtent(FVector(0, 0, 0));
@@ -84,7 +87,7 @@ void ALocationMarker::SetColor(FVector color) {
 
 void ALocationMarker::EnableCollision() {
 	FBoxSphereBounds textBounds = textComponent->GetLocalBounds();
-	collisionComponent->SetBoxExtent(textBounds.BoxExtent + 20);
+	collisionComponent->SetBoxExtent(textBounds.BoxExtent + FVector(50.0f, 50.0f, 50.0f));
 	collisionComponent->SetRelativeLocation(-textBounds.Origin);
 	collisionComponent->SetActive(true);
 }
@@ -94,11 +97,15 @@ void ALocationMarker::OnClick(){
 		ARadarGameStateBase* gameMode = GetWorld()->GetGameState<ARadarGameStateBase>();
 		if(gameMode != NULL){
 			GlobalState* globalState = &gameMode->globalState;
-			fprintf(stderr, "Set radar site to %s\n", data.c_str());
+			UE_LOG(LogTemp, Warning, TEXT("Set radar site to %s"), *FString(data.c_str()));
 			globalState->downloadSiteId = data;
-			if(!globalState->downloadData){
-				globalState->openDownloadDropdown = true;
-			}
+			globalState->downloadData = true;
+			globalState->pollData = true;
+			
+			globalState->teleportLatitude = latitude;
+			globalState->teleportLongitude = longitude;
+			globalState->teleportAltitude = altitude;
+			globalState->EmitEvent("TeleportCamera");
 		}
 	}
 }

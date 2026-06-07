@@ -207,6 +207,16 @@ TSharedRef<SWidget> SVRMenuWidget::MakeCheckbox(const FString& Label, TFunction<
 
 TSharedRef<SWidget> SVRMenuWidget::MakeSlider(const FString& Label, TFunction<float()> GetVal, TFunction<void(float)> SetVal, FString FormatStr)
 {
+	static FSliderStyle VRSliderStyle = FCoreStyle::Get().GetWidgetStyle<FSliderStyle>("Slider");
+	static bool bStyleInitialized = false;
+	if (!bStyleInitialized) {
+		VRSliderStyle.NormalThumbImage.ImageSize = FVector2D(64, 64);
+		VRSliderStyle.HoveredThumbImage.ImageSize = FVector2D(72, 72);
+		VRSliderStyle.DisabledThumbImage.ImageSize = FVector2D(64, 64);
+		VRSliderStyle.BarThickness = 16.0f;
+		bStyleInitialized = true;
+	}
+
 	return SNew(SVerticalBox)
 		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
 		[
@@ -220,9 +230,11 @@ TSharedRef<SWidget> SVRMenuWidget::MakeSlider(const FString& Label, TFunction<fl
 		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,0,0,16))
 		[
 			SNew(SBox)
-			.HeightOverride(40.0f) // Massive slider track height for VR clicking
+			.HeightOverride(80.0f) // Massive slider track height for VR clicking
+			.Padding(FMargin(16, 0)) // Give it some side padding so the massive thumb doesn't clip
 			[
 				SNew(SSlider)
+				.Style(&VRSliderStyle)
 				.Value_Lambda([GetVal]() { return GetVal(); })
 				.OnValueChanged_Lambda([SetVal](float v) { SetVal(v); })
 				.MinValue(0.0f).MaxValue(1.0f)

@@ -137,8 +137,8 @@ void ALocationMarkerManager::AddSiteMarkers() {
 				marker->altitude = site->altitude;
 				marker->SetActorLocation(vectorF);
 				marker->SetText(site->name);
-				marker->SetColor(FVector(std::pow(globalState->siteMarkerColorR / 255.0f, 2.2f), std::pow(globalState->siteMarkerColorG / 255.0f, 2.2f), std::pow(globalState->siteMarkerColorB / 255.0f, 2.2f)));
 				marker->EnableCollision();
+				marker->SetColor(FVector(std::pow(globalState->siteMarkerColorR / 255.0f, 2.2f), std::pow(globalState->siteMarkerColorG / 255.0f, 2.2f), std::pow(globalState->siteMarkerColorB / 255.0f, 2.2f)));
 				locationMarkerObjects[name] = marker;
 			}
 		}

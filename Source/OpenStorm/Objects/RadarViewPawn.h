@@ -2,6 +2,7 @@
 
 #pragma once
 #include "RadarVolumeRender.h"
+#include "../Radar/SimpleVector3.h"
 #include "CoreMinimal.h"
 #include "GameFramework/Pawn.h"
 #include "Camera/CameraComponent.h"
@@ -60,6 +61,7 @@ public:
 	bool isRadarVolumeViewActive = true;
 	
 	FVector oldCameraPosition = FVector(0, 0, 0.0000000000000001);
+	SimpleVector3<float> currentLatLon = {0,0,0};
 	
 	std::vector<uint64_t> callbackIds = {};
 
@@ -77,6 +79,7 @@ public:
 	void VRClickRelease();
 	void VRScrollRotateX(float value);
 	void VRScrollRotateY(float value);
+	void ToggleVRMenu();
 
 	void GripLeft(float value);
 	void GripRight(float value);

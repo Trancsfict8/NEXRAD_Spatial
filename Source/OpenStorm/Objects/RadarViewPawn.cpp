@@ -13,6 +13,7 @@
 #include "../Radar/SimpleVector3.h"
 #include "../Radar/Globe.h"
 #include "../Radar/NexradSites/NexradSites.h"
+#include "../UI/ClickableInterface.h"
 #include "../UI/ImGuiController.h"
 #include "../UI/Slate/SlateUI.h"
 #include "../UI/Slate/SVRMenuWidget.h"
@@ -104,7 +105,7 @@ void ARadarViewPawn::BeginPlay()
 	widgetInteraction->RegisterComponent();
 	widgetInteraction->TraceChannel = ECollisionChannel::ECC_Visibility;
 	widgetInteraction->InteractionSource = EWidgetInteractionSource::World;
-	widgetInteraction->InteractionDistance = 1000.0f;
+	widgetInteraction->InteractionDistance = 100000.0f;
 	widgetInteraction->bShowDebug = false;
 	widgetInteraction->SetRelativeLocation(FVector(3.0f, 0.0f, -4.0f));
 	widgetInteraction->SetRelativeRotation(FRotator(-45.0f, 0.0f, 0.0f));
@@ -129,11 +130,13 @@ void ARadarViewPawn::BeginPlay()
 	//mainVolumeRender = ARadarVolumeRender::instance;
 	mainVolumeRender = FindActor<ARadarVolumeRender>();
 	gui = FindActor<AImGuiController>();
+	if (gui) {
+		gui->Destroy();
+	}
 	hud = FindActor<ASlateUI>();
-	//hud = new HUD(GetWorld()->GetGameViewport());
-	//hud = NewObject<class ASlateUI>(this);
-	//hud = GetWorld()->SpawnActor<ASlateUI>(ASlateUI::StaticClass());;
-	//hud->AddToViewport(GetWorld()->GetGameViewport());
+	if (hud) {
+		hud->Destroy();
+	}
 	if (ARadarGameStateBase* gameState = GetWorld()->GetGameState<ARadarGameStateBase>()) {
 
 		GlobalState* globalState = &gameState->globalState;
@@ -145,6 +148,13 @@ void ARadarViewPawn::BeginPlay()
 		callbackIds.push_back(globalState->RegisterEvent("TeleportCamera", [this, globalState](std::string stringData, void* extraData) {
 			if (globalState->globe != NULL) {
 				SimpleVector3<double> targetPos = globalState->globe->GetPointScaledDegrees(globalState->teleportLatitude, globalState->teleportLongitude, globalState->teleportAltitude);
+				SetActorLocation(FVector(targetPos.x, targetPos.y, targetPos.z));
+			}
+		}));
+		
+		callbackIds.push_back(globalState->RegisterEvent("GlobeUpdate", [this, globalState](std::string stringData, void* extraData) {
+			if (globalState->globe != NULL) {
+				SimpleVector3<double> targetPos = globalState->globe->GetPointScaled(SimpleVector3<double>(currentLatLon.x, currentLatLon.y, currentLatLon.z));
 				SetActorLocation(FVector(targetPos.x, targetPos.y, targetPos.z));
 			}
 		}));
@@ -184,6 +194,32 @@ void ARadarViewPawn::Tick(float deltaTime)
 		if (clickAxis > 0.5f && !bWasClicked) {
 			bWasClicked = true;
 			widgetInteraction->PressPointerKey(EKeys::LeftMouseButton);
+
+			if (!widgetInteraction->IsOverInteractableWidget()) {
+				UE_LOG(LogTemp, Warning, TEXT("VR Trigger (Axis) not over UI, tracing into world..."));
+				FHitResult hitResult;
+				FVector start = widgetInteraction->GetComponentLocation();
+				FVector end = start + (widgetInteraction->GetForwardVector() * 100000.0f);
+				FCollisionQueryParams queryParams;
+				queryParams.AddIgnoredActor(this);
+				
+				if (GetWorld()->LineTraceSingleByChannel(hitResult, start, end, ECC_Camera, queryParams)) {
+					AActor* hitActor = hitResult.GetActor();
+					if (hitActor) {
+						UE_LOG(LogTemp, Warning, TEXT("VR Trigger hit actor: %s"), *hitActor->GetName());
+						IClickableInterface* clickable = dynamic_cast<IClickableInterface*>(hitActor);
+						if (clickable != nullptr) {
+							UE_LOG(LogTemp, Warning, TEXT("VR Trigger hit an IClickableInterface!"));
+							clickable->OnClick();
+						} else {
+							UE_LOG(LogTemp, Warning, TEXT("VR Trigger hit an actor, but it was NOT an IClickableInterface."));
+						}
+					}
+				} else {
+					UE_LOG(LogTemp, Warning, TEXT("VR Trigger trace did not hit any actor."));
+				}
+			}
+
 		} else if (clickAxis < 0.3f && bWasClicked) {
 			bWasClicked = false;
 			widgetInteraction->ReleasePointerKey(EKeys::LeftMouseButton);
@@ -241,16 +277,21 @@ void ARadarViewPawn::Tick(float deltaTime)
 		}
 		
 		FVector camPos = camera->GetComponentLocation();
+		
+		if(globalState->globe != NULL){
+			SimpleVector3<double> actorLocTmp = SimpleVector3<double>(camPos.X, camPos.Y, camPos.Z);
+			currentLatLon = SimpleVector3<float>(globalState->globe->GetLocationScaled(actorLocTmp));
+		}
+
 		if(oldCameraPosition != camPos){
 			SimpleVector3<float> cameraLocation = SimpleVector3<float>(camPos.X, camPos.Y, camPos.Z);
 			globalState->EmitEvent("CameraMove", "", (void*)&cameraLocation);
 			oldCameraPosition = camPos;
 		}
-		
-	}
+	} // closes: if (ARadarGameStateBase* GS = GetWorld()->GetGameState<ARadarGameStateBase>())
+
 	meshComponent->SetRelativeLocation(camera->GetRelativeLocation());
 	meshComponent->SetRelativeRotation(camera->GetRelativeRotation());
-	
 }
 
 ARadarViewPawn::~ARadarViewPawn(){
@@ -289,6 +330,11 @@ void ARadarViewPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 	
 	PlayerInputComponent->BindAction("VRClick", IE_Pressed, this, &ARadarViewPawn::VRClickPress);
 	PlayerInputComponent->BindAction("VRClick", IE_Released, this, &ARadarViewPawn::VRClickRelease);
+	
+	PlayerInputComponent->BindKey(EKeys::Gamepad_Special_Left, IE_Pressed, this, &ARadarViewPawn::ToggleVRMenu);
+	PlayerInputComponent->BindKey(EKeys::Gamepad_FaceButton_Top, IE_Pressed, this, &ARadarViewPawn::ToggleVRMenu);
+	PlayerInputComponent->BindKey(EKeys::Gamepad_FaceButton_Left, IE_Pressed, this, &ARadarViewPawn::ToggleVRMenu);
+	PlayerInputComponent->BindAction("ToggleVRMenu", IE_Pressed, this, &ARadarViewPawn::ToggleVRMenu);
 
 	PlayerInputComponent->BindAxis("VRGripLeft", this, &ARadarViewPawn::GripLeft);
 	PlayerInputComponent->BindAxis("VRGripRight", this, &ARadarViewPawn::GripRight);
@@ -372,10 +418,7 @@ void ARadarViewPawn::PressMouse() {
 }
 
 void ARadarViewPawn::VRClickPress() {
-	if (widgetInteraction) {
-		UE_LOG(LogTemp, Warning, TEXT("VR Trigger Pressed - Clicking UI"));
-		widgetInteraction->PressPointerKey(EKeys::LeftMouseButton);
-	}
+	// Raycast logic moved to Tick() via VRClickAxis
 }
 
 void ARadarViewPawn::VRClickRelease() {
@@ -421,6 +464,12 @@ void ARadarViewPawn::VRScrollRotateY(float value) {
 	} else {
 		// If we are not pointing at the menu, we don't map Y to vertical rotation in VR
 		// since head movement handles pitch. So do nothing or map to zoom/etc.
+	}
+}
+
+void ARadarViewPawn::ToggleVRMenu() {
+	if (vrMenuWidget) {
+		vrMenuWidget->SetVisibility(!vrMenuWidget->IsVisible());
 	}
 }
 
