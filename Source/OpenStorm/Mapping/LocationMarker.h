@@ -52,6 +52,7 @@ public:
 	void SetText(std::string text);
 	void SetColor(FVector color);
 	void EnableCollision();
+	void SetHovered(bool bHovered);
 	
 	virtual void OnClick() override;
 private:
@@ -61,6 +62,8 @@ private:
 	UMaterialInstanceDynamic* meshMaterialInstance = NULL;
 	UPROPERTY(EditAnywhere);
 	UMaterial* textMaterial = NULL;
+	
+	FVector originalColor = FVector(1.0f, 1.0f, 1.0f);
 	UPROPERTY(EditAnywhere);
 	UMaterialInstanceDynamic* textMaterialInstance = NULL;
 };

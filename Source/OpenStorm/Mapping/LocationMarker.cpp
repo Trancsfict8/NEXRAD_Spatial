@@ -83,6 +83,7 @@ void ALocationMarker::SetColor(FVector color) {
 		meshMaterialInstance->SetVectorParameterValue("Color", color);
 		textMaterialInstance->SetVectorParameterValue("Color", color);
 	}
+	originalColor = color;
 }
 
 void ALocationMarker::EnableCollision() {
@@ -90,6 +91,20 @@ void ALocationMarker::EnableCollision() {
 	collisionComponent->SetBoxExtent(textBounds.BoxExtent + FVector(50.0f, 50.0f, 50.0f));
 	collisionComponent->SetRelativeLocation(-textBounds.Origin);
 	collisionComponent->SetActive(true);
+}
+
+void ALocationMarker::SetHovered(bool bHovered) {
+	if (textComponent) {
+		float scale = bHovered ? 1.5f : 1.0f;
+		textComponent->SetRelativeScale3D(FVector(scale, scale, scale));
+		if (textMaterialInstance) {
+			if (bHovered) {
+				textMaterialInstance->SetVectorParameterValue("Color", FVector(1.0f, 1.0f, 0.0f)); // Yellow highlight
+			} else {
+				textMaterialInstance->SetVectorParameterValue("Color", originalColor);
+			}
+		}
+	}
 }
 
 void ALocationMarker::OnClick(){
@@ -102,10 +117,7 @@ void ALocationMarker::OnClick(){
 			globalState->downloadData = true;
 			globalState->pollData = true;
 			
-			globalState->teleportLatitude = latitude;
-			globalState->teleportLongitude = longitude;
-			globalState->teleportAltitude = altitude;
-			globalState->EmitEvent("TeleportCamera");
+			// DO NOT trigger TeleportCamera anymore!
 		}
 	}
 }

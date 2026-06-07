@@ -13,6 +13,7 @@
 #include "../Radar/SimpleVector3.h"
 #include "../Radar/Globe.h"
 #include "../Radar/NexradSites/NexradSites.h"
+#include "../Mapping/LocationMarker.h"
 #include "../UI/ClickableInterface.h"
 #include "../UI/ImGuiController.h"
 #include "../UI/Slate/SlateUI.h"
@@ -191,32 +192,37 @@ void ARadarViewPawn::Tick(float deltaTime)
 
 
 	if (widgetInteraction) {
+		
+		ALocationMarker* currentHoveredMarker = nullptr;
+		
+		if (!widgetInteraction->IsOverInteractableWidget()) {
+			FHitResult hitResult;
+			FVector start = widgetInteraction->GetComponentLocation();
+			FVector end = start + (widgetInteraction->GetForwardVector() * 100000.0f);
+			FCollisionQueryParams queryParams;
+			queryParams.AddIgnoredActor(this);
+			
+			if (GetWorld()->LineTraceSingleByChannel(hitResult, start, end, ECC_Camera, queryParams)) {
+				AActor* hitActor = hitResult.GetActor();
+				if (hitActor) {
+					currentHoveredMarker = dynamic_cast<ALocationMarker*>(hitActor);
+				}
+			}
+		}
+		
+		if (lastHoveredMarker != currentHoveredMarker) {
+			if (lastHoveredMarker) lastHoveredMarker->SetHovered(false);
+			if (currentHoveredMarker) currentHoveredMarker->SetHovered(true);
+			lastHoveredMarker = currentHoveredMarker;
+		}
+
 		if (clickAxis > 0.5f && !bWasClicked) {
 			bWasClicked = true;
 			widgetInteraction->PressPointerKey(EKeys::LeftMouseButton);
 
 			if (!widgetInteraction->IsOverInteractableWidget()) {
-				UE_LOG(LogTemp, Warning, TEXT("VR Trigger (Axis) not over UI, tracing into world..."));
-				FHitResult hitResult;
-				FVector start = widgetInteraction->GetComponentLocation();
-				FVector end = start + (widgetInteraction->GetForwardVector() * 100000.0f);
-				FCollisionQueryParams queryParams;
-				queryParams.AddIgnoredActor(this);
-				
-				if (GetWorld()->LineTraceSingleByChannel(hitResult, start, end, ECC_Camera, queryParams)) {
-					AActor* hitActor = hitResult.GetActor();
-					if (hitActor) {
-						UE_LOG(LogTemp, Warning, TEXT("VR Trigger hit actor: %s"), *hitActor->GetName());
-						IClickableInterface* clickable = dynamic_cast<IClickableInterface*>(hitActor);
-						if (clickable != nullptr) {
-							UE_LOG(LogTemp, Warning, TEXT("VR Trigger hit an IClickableInterface!"));
-							clickable->OnClick();
-						} else {
-							UE_LOG(LogTemp, Warning, TEXT("VR Trigger hit an actor, but it was NOT an IClickableInterface."));
-						}
-					}
-				} else {
-					UE_LOG(LogTemp, Warning, TEXT("VR Trigger trace did not hit any actor."));
+				if (currentHoveredMarker) {
+					currentHoveredMarker->OnClick();
 				}
 			}
 

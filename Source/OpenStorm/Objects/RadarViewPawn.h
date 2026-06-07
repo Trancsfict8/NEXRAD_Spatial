@@ -63,6 +63,8 @@ public:
 	FVector oldCameraPosition = FVector(0, 0, 0.0000000000000001);
 	SimpleVector3<float> currentLatLon = {0,0,0};
 	
+	class ALocationMarker* lastHoveredMarker = nullptr;
+	
 	std::vector<uint64_t> callbackIds = {};
 
 	void MoveFB(float value);

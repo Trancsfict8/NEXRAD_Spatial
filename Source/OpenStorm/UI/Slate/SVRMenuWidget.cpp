@@ -404,7 +404,6 @@ TSharedRef<SWidget> SVRMenuWidget::BuildGPSTab()
 						gs->downloadSiteId = std::string(TCHAR_TO_UTF8(*SiteName));
 						gs->downloadData = true;
 						gs->pollData = true;
-						gs->EmitEvent("TeleportCamera");
 					}
 					return FReply::Handled();
 				})
