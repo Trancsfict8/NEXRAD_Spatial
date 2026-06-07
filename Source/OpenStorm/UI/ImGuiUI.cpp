@@ -11,6 +11,17 @@
 #include "../EngineHelpers/StringUtils.h"
 #include "./portable-file-dialogs.h"
 #include "./ClickableInterface.h"
+#include "Windows/AllowWindowsPlatformTypes.h"
+#include <windows.h>
+#include <commdlg.h>
+#include <shobjidl.h>
+#include "Windows/HideWindowsPlatformTypes.h"
+
+#include "HttpModule.h"
+#include "Interfaces/IHttpRequest.h"
+#include "Interfaces/IHttpResponse.h"
+#include "Serialization/JsonReader.h"
+#include "Serialization/JsonSerializer.h"
 
 #include <vector>
 
@@ -441,6 +452,29 @@ void ImGuiUI::MainUI()
 				SetCustomInputTooltip("Altitude to jump to in meters (1000 feet = ~305 meters)");
 				CustomFloatInput("Target Altitude (m)", 0.0f, 20000.0f, &globalState.teleportAltitude, &globalState.defaults->teleportAltitude, CustomInput_SliderOnly);
 				
+				if (ImGui::Button("Get My Location")) {
+					TSharedRef<IHttpRequest, ESPMode::ThreadSafe> httpRequest = FHttpModule::Get().CreateRequest();
+					httpRequest->SetURL("http://ip-api.com/json/");
+					httpRequest->SetVerb("GET");
+					GlobalState* gsPtr = &globalState;
+					httpRequest->OnProcessRequestComplete().BindLambda([gsPtr](FHttpRequestPtr Request, FHttpResponsePtr Response, bool bSuccess){
+						if(bSuccess && Response.IsValid()){
+							FString content = Response->GetContentAsString();
+							TSharedPtr<FJsonObject> jsonObject;
+							TSharedRef<TJsonReader<>> reader = TJsonReaderFactory<>::Create(content);
+							if (FJsonSerializer::Deserialize(reader, jsonObject) && jsonObject.IsValid()) {
+								if (jsonObject->HasField("lat") && jsonObject->HasField("lon")) {
+									gsPtr->teleportLatitude = jsonObject->GetNumberField("lat");
+									gsPtr->teleportLongitude = jsonObject->GetNumberField("lon");
+									gsPtr->EmitEvent("TeleportCamera");
+								}
+							}
+						}
+					});
+					httpRequest->ProcessRequest();
+				}
+				CustomTooltipForPrevious("Searches the web for IP-based location data to jump the map to");
+				ImGui::SameLine();
 				if (ImGui::Button("Jump to Coordinates")) {
 					// Auto-select nearest radar station
 					NexradSites::Site* nearestSite = NULL;
@@ -664,13 +698,6 @@ void ImGuiUI::MainUI()
 				}
 
 				ImGui::Separator();
-				ImGui::Text("Tabletop / God's View");
-				ImGui::Checkbox("Tabletop Mode", &globalState.tabletopMode);
-				CustomTooltipForPrevious("Shrink the radar around the active station to a table-top hologram. Use the scale slider to zoom in/out.");
-				if (globalState.tabletopMode) {
-					SetCustomInputTooltip("Zoom level for tabletop view (smaller = zoomed out, larger = zoomed in)");
-					CustomFloatInput("Tabletop Scale", 0.000001f, 0.001f, &globalState.tabletopScale, &globalState.defaults->tabletopScale);
-				}
 
 				SetCustomInputTooltip("How bright the map is, increasing this makes the radar volume less visible");
 				CustomFloatInput("Map Brightness", 0.01, 1.0, &globalState.mapBrightness, &globalState.defaults->mapBrightness);
@@ -837,6 +864,7 @@ void ImGuiUI::MainUI()
 				}
 				CustomTooltipForPrevious("Move this panel into its own window");
 				ImGui::SameLine();
+				/* 
 				if (ToggleButton("VR " ICON_FA_VR_CARDBOARD, globalState.vrMode)) {
 					globalState.vrMode = !globalState.vrMode;
 					if(globalState.vrMode){
@@ -849,6 +877,7 @@ void ImGuiUI::MainUI()
 					imGuiController->ExternalWindow();
 				}
 				CustomTooltipForPrevious("Enable virtual reality mode if a headset is connected");
+				*/
 				ImGui::TreePop();
 			}
 			

@@ -17,6 +17,12 @@
 #include "Engine/World.h"
 #include "Engine/GameViewportClient.h"
 
+#include "HttpModule.h"
+#include "Interfaces/IHttpRequest.h"
+#include "Interfaces/IHttpResponse.h"
+#include "Serialization/JsonReader.h"
+#include "Serialization/JsonSerializer.h"
+
 BEGIN_SLATE_FUNCTION_BUILD_OPTIMIZATION
 
 static FSlateFontInfo LabelFont()
@@ -428,6 +434,36 @@ TSharedRef<SWidget> SVRMenuWidget::BuildGPSTab()
 			[
 				SNew(SBox).HeightOverride(50.0f)[
 					SNew(SButton)
+					.Text(FText::FromString("Get Location"))
+					.OnClicked_Lambda([this]() {
+						if (GlobalState* gs = GetGlobalState()) {
+							TSharedRef<IHttpRequest, ESPMode::ThreadSafe> httpRequest = FHttpModule::Get().CreateRequest();
+							httpRequest->SetURL("http://ip-api.com/json/");
+							httpRequest->SetVerb("GET");
+							httpRequest->OnProcessRequestComplete().BindLambda([gs](FHttpRequestPtr Request, FHttpResponsePtr Response, bool bSuccess){
+								if(bSuccess && Response.IsValid()){
+									FString content = Response->GetContentAsString();
+									TSharedPtr<FJsonObject> jsonObject;
+									TSharedRef<TJsonReader<>> reader = TJsonReaderFactory<>::Create(content);
+									if (FJsonSerializer::Deserialize(reader, jsonObject) && jsonObject.IsValid()) {
+										if (jsonObject->HasField("lat") && jsonObject->HasField("lon")) {
+											gs->teleportLatitude = jsonObject->GetNumberField("lat");
+											gs->teleportLongitude = jsonObject->GetNumberField("lon");
+											gs->EmitEvent("TeleportCamera");
+										}
+									}
+								}
+							});
+							httpRequest->ProcessRequest();
+						}
+						return FReply::Handled();
+					})
+				]
+			]
+			+ SHorizontalBox::Slot().FillWidth(1).Padding(FMargin(4,0,4,0))
+			[
+				SNew(SBox).HeightOverride(50.0f)[
+					SNew(SButton)
 					.Text(FText::FromString("Jump"))
 					.OnClicked_Lambda([this]() {
 						if (GlobalState* gs = GetGlobalState()) {
@@ -510,23 +546,6 @@ TSharedRef<SWidget> SVRMenuWidget::BuildMapTab()
 				TEXT("Custom Map Scale: {0}"))
 		]
 
-		+ SVerticalBox::Slot().AutoHeight()[ MakeLabel(TEXT("Tabletop / God's View")) ]
-
-		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
-		[
-			MakeCheckbox(TEXT("Tabletop Mode"), 
-				[this]() { return GetGlobalState() && GetGlobalState()->tabletopMode; }, 
-				[this](bool v) { if (GetGlobalState()) GetGlobalState()->tabletopMode = v; })
-		]
-
-		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
-		[
-			MakeSlider(TEXT("Tabletop Scale"), 
-				[this]() { return GetGlobalState() ? GetGlobalState()->tabletopScale / 0.001f : 0.02f; },
-				[this](float v) { if (GetGlobalState()) GetGlobalState()->tabletopScale = v * 0.001f; }, 
-				TEXT("Tabletop Scale Zoom: {0}"))
-		]
-		
 		+ SVerticalBox::Slot().AutoHeight()[ MakeLabel(TEXT("Map Appearance")) ]
 
 		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
@@ -567,14 +586,16 @@ TSharedRef<SWidget> SVRMenuWidget::BuildMRTab()
 		+ SVerticalBox::Slot().AutoHeight()[ MakeLabel(TEXT("VR Settings")) ]
 		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
 		[
-			MakeCheckbox(TEXT("VR Mode"), 
-				[this]() { return GetGlobalState() && GetGlobalState()->vrMode; }, 
-				[this](bool v) { 
-					if (GlobalState* gs = GetGlobalState()) {
-						gs->vrMode = v;
-						gs->EmitEvent("UpdateEngineSettings");
-					}
-				})
+			// Temporarily disabled as requested
+			// MakeCheckbox(TEXT("VR Mode"), 
+			// 	[this]() { return GetGlobalState() && GetGlobalState()->vrMode; }, 
+			// 	[this](bool v) { 
+			// 		if (GlobalState* gs = GetGlobalState()) {
+			// 			gs->vrMode = v;
+			// 			gs->EmitEvent("UpdateEngineSettings");
+			// 		}
+			// 	})
+			SNew(SBox)
 		];
 }
 

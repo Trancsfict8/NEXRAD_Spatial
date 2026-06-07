@@ -75,23 +75,18 @@ public:
 	void PressMouse();
 	void VRClickPress();
 	void VRClickRelease();
+	void VRScrollRotateX(float value);
+	void VRScrollRotateY(float value);
 
 	void GripLeft(float value);
 	void GripRight(float value);
 	
 private:
+	float accumulatedScrollY = 0.0f;
 	float leftGripState = 0.0f;
 	float rightGripState = 0.0f;
 
-	bool bWasTwoHandGripping = false;
-	float initialGripDistance = 0.0f;
-	float initialTabletopScale = 0.0f;
-	FVector initialGripMidpoint;
-	double initialTabletopCenterLat = 0.0;
-	double initialTabletopCenterLon = 0.0;
 
-	bool bWasOneHandGripping = false;
-	FVector initialOneHandPos;
 
 public:
 	UPROPERTY(EditAnywhere)

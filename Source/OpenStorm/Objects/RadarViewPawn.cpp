@@ -106,10 +106,12 @@ void ARadarViewPawn::BeginPlay()
 	widgetInteraction->InteractionSource = EWidgetInteractionSource::World;
 	widgetInteraction->InteractionDistance = 1000.0f;
 	widgetInteraction->bShowDebug = false;
+	widgetInteraction->SetRelativeLocation(FVector(3.0f, 0.0f, -4.0f));
+	widgetInteraction->SetRelativeRotation(FRotator(-45.0f, 0.0f, 0.0f));
 
 	// Create physical laser pointer dynamically at runtime to avoid UE5 C++ constructor corruption
 	UStaticMeshComponent* dynamicLaser = NewObject<UStaticMeshComponent>(this, TEXT("DynamicLaserMesh"));
-	dynamicLaser->SetupAttachment(rightController);
+	dynamicLaser->SetupAttachment(widgetInteraction);
 	dynamicLaser->RegisterComponent();
 	UStaticMesh* cylMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
 	if (cylMesh) {
@@ -177,33 +179,7 @@ void ARadarViewPawn::Tick(float deltaTime)
 		moveSpeed = globalState->moveSpeed * (1 + speedBoost * 3);
 		rotateSpeed = globalState->rotateSpeed;
 
-		// --- Tabletop Mode ---
-		// When active, center globe on the active radar station and shrink to tabletop scale
-		static bool lastTabletopMode = false;
-		if (globalState->tabletopMode != lastTabletopMode) {
-			lastTabletopMode = globalState->tabletopMode;
-			if (globalState->globe != NULL) {
-				if (globalState->tabletopMode) {
-					// Look up active station location and pivot the globe to it
-					NexradSites::Site* site = NexradSites::GetSite(globalState->downloadSiteId.c_str());
-					if (site != NULL) {
-						globalState->tabletopCenterLat = site->latitude;
-						globalState->tabletopCenterLon = site->longitude;
-					} else {
-						globalState->tabletopCenterLat = globalState->teleportLatitude;
-						globalState->tabletopCenterLon = globalState->teleportLongitude;
-					}
-					globalState->globe->SetTopCoordinates(globalState->tabletopCenterLat, globalState->tabletopCenterLon);
-					globalState->globe->scale = globalState->tabletopScale;
-				} else {
-					// Restore normal scale
-					globalState->globe->scale = globalState->realLifeScale ? 100.0 : globalState->customMapScale;
-				}
-				globalState->EmitEvent("UpdateVolumeParameters");
-				globalState->EmitEvent("LocationMarkersUpdate");
-			}
-		}
-		// In tabletop mode allow real-time scale adjustment via tabletopScale slider	
+
 	if (widgetInteraction) {
 		if (clickAxis > 0.5f && !bWasClicked) {
 			bWasClicked = true;
@@ -214,67 +190,7 @@ void ARadarViewPawn::Tick(float deltaTime)
 		}
 	}
 
-	if (globalState->tabletopMode && globalState->globe != NULL) {
-		bool bLeftGripped = leftGripState > 0.5f;
-			bool bRightGripped = rightGripState > 0.5f;
 
-			if (bLeftGripped && bRightGripped) {
-				float currentDist = FVector::Dist(leftController->GetComponentLocation(), rightController->GetComponentLocation());
-				FVector currentMidpoint = (leftController->GetComponentLocation() + rightController->GetComponentLocation()) * 0.5f;
-				
-				if (!bWasTwoHandGripping) {
-					bWasTwoHandGripping = true;
-					bWasOneHandGripping = false;
-					initialGripDistance = currentDist;
-					initialTabletopScale = globalState->tabletopScale;
-					initialGripMidpoint = currentMidpoint;
-					initialTabletopCenterLat = globalState->tabletopCenterLat;
-					initialTabletopCenterLon = globalState->tabletopCenterLon;
-				} else {
-					// Zoom based on distance spread
-					if (initialGripDistance > 1.0f) {
-						float scaleFactor = currentDist / initialGripDistance;
-						globalState->tabletopScale = FMath::Clamp(initialTabletopScale * scaleFactor, 0.0000001f, 0.01f);
-					}
-					
-					// Pan based on midpoint drag
-					FVector deltaPan = currentMidpoint - initialGripMidpoint;
-					float degreesPerCm = 0.00001f / globalState->tabletopScale; 
-					globalState->tabletopCenterLat = initialTabletopCenterLat - (deltaPan.X * degreesPerCm);
-					globalState->tabletopCenterLon = initialTabletopCenterLon - (deltaPan.Y * degreesPerCm);
-					
-					globalState->globe->SetTopCoordinates(globalState->tabletopCenterLat, globalState->tabletopCenterLon);
-					globalState->EmitEvent("UpdateVolumeParameters");
-					globalState->EmitEvent("LocationMarkersUpdate");
-				}
-			} else if (bLeftGripped || bRightGripped) {
-				bWasTwoHandGripping = false;
-				UMotionControllerComponent* activeController = bLeftGripped ? leftController : rightController;
-				FVector currentPos = activeController->GetComponentLocation();
-				
-				if (!bWasOneHandGripping) {
-					bWasOneHandGripping = true;
-					initialOneHandPos = currentPos;
-					initialTabletopCenterLat = globalState->tabletopCenterLat;
-					initialTabletopCenterLon = globalState->tabletopCenterLon;
-				} else {
-					// Pan based on single hand drag
-					FVector deltaPan = currentPos - initialOneHandPos;
-					float degreesPerCm = 0.00001f / globalState->tabletopScale; 
-					globalState->tabletopCenterLat = initialTabletopCenterLat - (deltaPan.X * degreesPerCm);
-					globalState->tabletopCenterLon = initialTabletopCenterLon - (deltaPan.Y * degreesPerCm);
-					
-					globalState->globe->SetTopCoordinates(globalState->tabletopCenterLat, globalState->tabletopCenterLon);
-					globalState->EmitEvent("UpdateVolumeParameters");
-					globalState->EmitEvent("LocationMarkersUpdate");
-				}
-			} else {
-				bWasTwoHandGripping = false;
-				bWasOneHandGripping = false;
-			}
-
-			globalState->globe->scale = globalState->tabletopScale;
-		}
 		bool shouldEnableTAA = globalState->temporalAntiAliasing;
 		FVector location = GetActorLocation();
 		location += camera->GetForwardVector() * forwardMovement * deltaTime * moveSpeed;
@@ -377,6 +293,8 @@ void ARadarViewPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 	PlayerInputComponent->BindAxis("VRGripLeft", this, &ARadarViewPawn::GripLeft);
 	PlayerInputComponent->BindAxis("VRGripRight", this, &ARadarViewPawn::GripRight);
 	PlayerInputComponent->BindAxis("VRClickAxis", this, &ARadarViewPawn::VRClickAxisFunc);
+	PlayerInputComponent->BindAxis("VRScrollRotateX", this, &ARadarViewPawn::VRScrollRotateX);
+	PlayerInputComponent->BindAxis("VRScrollRotateY", this, &ARadarViewPawn::VRScrollRotateY);
 }
 
 void ARadarViewPawn::MoveFB(float value)
@@ -478,6 +396,33 @@ void ARadarViewPawn::GripRight(float value) {
 	rightGripState = value;
 }
 
+void ARadarViewPawn::VRScrollRotateX(float value) {
+	if (widgetInteraction && widgetInteraction->IsOverHitTestVisibleWidget()) {
+		// Do nothing or handle horizontal scroll if needed
+	} else {
+		horizontalRotation = value;
+	}
+}
+
+void ARadarViewPawn::VRScrollRotateY(float value) {
+	if (widgetInteraction && widgetInteraction->IsOverHitTestVisibleWidget()) {
+		if (FMath::Abs(value) > 0.1f) {
+			accumulatedScrollY += value * 0.2f;
+			if (accumulatedScrollY > 1.0f) {
+				widgetInteraction->ScrollWheel(1.0f);
+				accumulatedScrollY -= 1.0f;
+			} else if (accumulatedScrollY < -1.0f) {
+				widgetInteraction->ScrollWheel(-1.0f);
+				accumulatedScrollY += 1.0f;
+			}
+		} else {
+			accumulatedScrollY = 0.0f;
+		}
+	} else {
+		// If we are not pointing at the menu, we don't map Y to vertical rotation in VR
+		// since head movement handles pitch. So do nothing or map to zoom/etc.
+	}
+}
 
 
 
