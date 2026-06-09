@@ -1,81 +1,61 @@
-# OpenStorm Radar
+# Nexrad Spatial
 
-OpenStorm radar is a free and open source 3d radar viewer. It uses Unreal Engine 5 as the base. Using a custom volumetric ray marching shader, entire radar volumes can be displayed.
+Nexrad Spatial is an immersive, fully 3D volumetric weather radar and data visualization application built on top of Unreal Engine 5.7. It allows you to step inside extreme weather events, view raw radar sweeps from across the globe in breathtaking 3D detail, and analyze live atmospheric data dynamically in Virtual Reality.
 
+This project is a heavily expanded derivative work of the open-source **OpenStorm Radar** project (originally developed by Jordan Schlick). It utilizes the powerful underlying volumetric rendering algorithms and data decoders of OpenStorm, while introducing a suite of specialized spatial computing features, real-time alerting, and an upgraded immersive user experience.
 
 ## Demo Video
 [![OpenStorm Demo](docs/img/OpenStorm2.jpg)](https://www.youtube.com/watch?v=9j1-sNnDQwY "OpenStorm Demo")
 
-
-## Download
-You can find a pre-built download [here](https://github.com/JordanSchlick/OpenStorm/releases/latest/)
-
-
-## Community / Contact
-Discord server invite [https://discord.gg/K3aU2hEYvJ](https://discord.gg/K3aU2hEYvJ)
-
-
 ## Features
-* Full 3D level 2 radar
-* Multithreaded data loading
-* No limit on number of files it can browse through
-* Load files in real time as they are updated
-* Display base radar products (Reflectivity, Radial Velocity, Spectrum Width, Correlation Coefficient, Differential Reflectivity, Differential Phase Shift)
-* Display derived products  (De-aliased Velocity, Storm Relative Velocity, Rotation)
-* Interpolation in space and time
-* Linux and Windows support
-* NEXRAD and ODIM H5 radar data support
-* VR headset viewing
-* 3D globe map with elevation
-* GIS boundaries and roads
-* Real-time data downloading
-* 2D slices of 3D data
+### Core Features (Inherited from OpenStorm)
+* Full 3D level 2 radar volumetric rendering using custom ray marching shaders.
+* Real-time multithreaded data loading and parsing without limits.
+* Broad support for base radar products (Reflectivity, Radial Velocity, Spectrum Width, Correlation Coefficient, Differential Reflectivity).
+* Real-time live data downloading and Historical dataset support.
+* Windows and Linux support.
+* NEXRAD and European ODIM H5 radar data processing.
+* Built-in 3D global topological map with elevation and GIS boundaries.
 
+### New Spatial & VR Features (Nexrad Spatial)
+* **Immersive VR Inspector Tool:** Reach out with your VR controller to probe the center of a storm. Dynamically extracts the exact dBZ, velocity, or specific radar moment of the voxel you are interacting with, displaying the data and your exact altitude AGL dynamically on your controller.
+* **Live NWS Warning Polygons:** Seamless integration with the National Weather Service API. Real-time Tornado, Severe Thunderstorm, Flash Flood, and Special Marine warnings are downloaded and mapped as procedural mesh outlines perfectly to the 3D globe's surface in your environment.
+* **Intelligent LOD & Culling System:** Performance-first architecture automatically distance-culls detailed GIS data and warning shapes when they aren't relevant to your camera view. You can even drag and drop local high-detail Census TIGER shapefiles into the engine for automatic dynamic loading.
+* **Data-Driven Spatial UI:** Beautiful floating spatial UI built natively using Slate. Toggle Imperial/Metric unit conversions dynamically across the app, constrain frame rates, modify warning visibilities, and customize VR locomotion properties.
+* **Overhauled Locomotion:** Extended OpenXR VR locomotion mapping (Trigger and Grip vertical movement bindings) across modern hardware including Meta Quest, Valve Index, and Windows Mixed Reality headsets. 
 
-## Getting data
-NEXRAD and European ODIM H5 radar data are currently supported.  
-You can get NEXRAD data from
-* Click on or select a radar and hit the start button under download in OpenStorm.
-* https://github.com/JordanSchlick/radar-data to download data in real time outside OpenStorm.
-* https://s3.amazonaws.com/unidata-nexrad-level2/index.html for historical data.
-
+## Getting Data
+NEXRAD and European ODIM H5 radar data are supported out of the box.
+* Simply click on a physical radar dish on the 3D map inside the app and press the **Start** button to instantly fetch live data.
+* Retrieve historical archive data manually via [Amazon AWS Unidata NEXRAD Archives](https://s3.amazonaws.com/unidata-nexrad-level2/index.html).
 
 ## Building
-1. Install Unreal Engine 5.2 and its dependencies. Newer engine version should work if you don't intend to modify the scene or materials.
-2. Clone the repo `git clone https://github.com/JordanSchlick/OpenStorm.git`
-3. Get submodules `git submodule update --init --recursive`
-4. Right click on the uproject file and generate visual studio project files
-5. Open the visual studio solution file
-6. Build the project in visual studio by hitting ctrl+shift+b
-7. Open the project in unreal engine
+1. Install **Unreal Engine 5.7** (or the latest 5.x version) and its C++ development dependencies.
+2. Clone this repository: `git clone [YOUR_REPO_URL_HERE]`
+3. Initialize submodules (required for RSL): `git submodule update --init --recursive`
+4. Right-click the `.uproject` file and select **Generate Visual Studio project files**.
+5. Open the resulting Visual Studio solution file (`.sln`).
+6. Build the project (e.g., `Ctrl+Shift+B`).
+7. Open the project in Unreal Engine.
 
-To build a standalone build, select package project within the desired platform under the Platforms dropdown.
+*Note: Nexrad Spatial relies heavily on strict compiler compliance in modern Unreal Engine. Warnings-as-errors (such as C4702) have been deliberately suppressed for the legacy NASA TRMM RSL C-library to allow successful builds.*
 
-To pull the latest changes to an existing copy of the repo use `git pull --recurse-submodules`  
+To build a standalone executable, select **Package Project** under the Platforms dropdown within the Unreal Editor.
 
-Some of the larger data files are not included in the repository. They can be retrieved out of the latest release. The files can be found in the OpenStorm folder inside the release builds. Currently you can copy the entire `Content/Data` folder into the project to get the data. The files are in the following locations in this project.  
-Elevation data: `Content/Data/Map/elevation.bin.gz`  
-Satellite imagery: `Content/Data/Map/Tiles/ImageryOnly.tar`  
-GIS map data files: `Content/Data/Map/GIS/`  
-The demo radar files in: `Content/Data/Demo/`  
+### Map & GIS Data Add-ons
+Some of the heavier geospatial data files are excluded from the repository. You can copy the entire `Content/Data` folder from the latest release into your project to populate the map. 
+Key paths include:
+* Elevation data: `Content/Data/Map/elevation.bin.gz`
+* GIS shapefiles and configs: `Content/Data/Map/GIS/`
+*(Tip: You can easily add your own high-detail road/boundary ESRI `.shp` files to the GIS folder alongside a `.cnf` configuration file to automatically load them into the application.)*
 
-The source code for reading HDF5 files and by extension european ODIM radar data is stored in a separate repository. It can be optionally installed by cloning `https://github.com/JordanSchlick/hdf5` into `OpenStorm/Source/OpenStorm/Radar/Deps` with `cd Source/OpenStorm/Radar/Deps` and then `git clone https://github.com/JordanSchlick/hdf5.git`  
-It has around 375 c files that will increase compile time. Due to the significant increase in compile time and the chances for incompatibilities, it is completely optional.
+## Architecture & Contributions
+Nexrad Spatial is built strictly for high-performance spatial analytics. All radar parsing modules are designed to remain independent of Unreal Engine so they can be abstracted to other APIs. 
+For detailed technical documentation on the data structures, UE5.7 upgrade paths, and implementation notes, please see `Architecture.md`.
 
+## Open Source Credits
+In accordance with the GPLv2 license, the core radar ingestion, binary decoding, and processing architecture utilized within this application are fully open-source.
+* **OpenStorm Base Framework:** Copyright (c) Jordan Schlick & Contributors.
+* **Nexrad Spatial Modifications:** Copyright (c) 2026 Nexrad Spatial.
 
-## Development
-### Using VS Code
-Create a symlink to your Unreal Engine installation beside this repository to enable intellisense and building from vs code. The link should be placed one folder up from this readme.  
-Windows example(needs admin privileges): `mklink /D UnrealEngine "C:\files\Epic\UE_5.2\"`  
-Linux example: `ln -s "/path/to/UnrealEngine" UnrealEngine`  
-The linked folder should contain the `Engine` folder.
-### Coding Guidelines
-In general just try to be consistent with existing code. The following guidelines should be followed. You may be asked to conform if your code significantly violates them.
-* The Radar source directory and everything under it must be self contained and can not have dependencies on Unreal Engine. It is meant to be a separable library that can be used outside of OpenStorm. There are currently node and python bindings available for it.
-* Indentation uses tabs.
-* Class functions are upper case while variables are lower case.
-* Try to keep as few includes as possible in .h files to reduce compile times.
-
-
-## Supporters
-[![WXFanatics](https://avatars.githubusercontent.com/u/96398274?s=48)](https://github.com/WXFanatics "WXFanatics")
+*If you are interested in the original desktop application without the VR ecosystem modifications, check out the original OpenStorm repository on GitHub.*

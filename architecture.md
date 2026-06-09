@@ -50,3 +50,9 @@ Upgrading OpenStorm from Unreal Engine 5.2 to 5.7 involved several breaking API 
 8.  **Engine & API Deprecation Cleansing**:
     *   **Stumble - Deprecation Pileup**: During upgrades, UE5.4+ audio APIs and standard library updates triggered dozens of severe deprecation warnings that threatened future compatibility.
     *   **Fix**: Migrated audio code in `Joke.cpp` to `FOnAudioCaptureFunction` and `OpenAudioCaptureStream` (and fixed a subtle compiler error by correctly swapping to `const void*` buffers). Resolved C++17 `std::codecvt_utf8` deprecations, and patched `UnrealImGui` plugin array deprecations (replacing `false` with `EAllowShrinking::No`).
+9.  **National Weather Service (NWS) API Integration**:
+    *   **Feature**: Implemented `WarningManager.cpp` to fetch live weather warnings (Tornado, Severe Thunderstorm, Flash Flood, etc.) from `api.weather.gov`.
+    *   **Architecture**: Added HTTP JSON requests that poll NWS for warnings around the camera's location. The warnings are mapped from latitude/longitude to the 3D spherical globe and rendered as hollow 40m thick outlines (`GISPolyline`) overlaid perfectly on the map. Features automatic LOD distance culling and a settings UI to toggle alert types on and off.
+10. **Persistent State & UX Refinements**:
+    *   **Feature**: `SettingsSaver.cpp` was updated to persistently save new settings like Imperial/Metric units, Max FPS limits, map brightness, and warning type toggles to `settings.json`.
+    *   **Feature**: Mapped specific VR controllers (Left Trigger to move Up, Left Grip to move Down) directly via dynamic API mapping and `DefaultInput.ini` fallback explicitly to prevent Oculus OpenXR mapping issues. Added a dynamic "LOADING DATA..." tag above active radar volumes to improve user feedback.
