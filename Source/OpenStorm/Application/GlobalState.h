@@ -62,6 +62,7 @@ public:
 	bool audioControlledHeight = false;
 	bool audioControlledOpacity = false;
 	bool audioControlledCutoff = false;
+	bool bInspectorEnabled = false; // toggles the VR inspector tool
 	
 	float maxFPS = 60.0f; // maximum frames per second
 	float animateSpeed = 5.0f; // speed of animation

@@ -47,8 +47,8 @@ void AJoke::AudioHandler(const float* audioData, int32 numFrames, int32 numChann
 }
 
 void AJoke::StartAudioCapture() {
-	Audio::FOnCaptureFunction OnCapture = [this](const float* AudioData, int32 NumFrames, int32 NumChannels, int32 SampleRate, double StreamTime, bool bOverFlow){
-		AudioHandler(AudioData, NumFrames, NumChannels, SampleRate, StreamTime, bOverFlow);
+	Audio::FOnAudioCaptureFunction OnCapture = [this](const void* AudioData, int32 NumFrames, int32 NumChannels, int32 SampleRate, double StreamTime, bool bOverFlow){
+		AudioHandler((const float*)AudioData, NumFrames, NumChannels, SampleRate, StreamTime, bOverFlow);
 	};
 	Audio::FAudioCaptureDeviceParams Params = Audio::FAudioCaptureDeviceParams();
 	//TArray<Audio::FCaptureDeviceInfo> devices;
@@ -69,7 +69,7 @@ void AJoke::StartAudioCapture() {
 
 
 	//Params.DeviceIndex = 6;
-	if (audioCapture.OpenCaptureStream(Params, MoveTemp(OnCapture), 512)){
+	if (audioCapture.OpenAudioCaptureStream(Params, MoveTemp(OnCapture), 512)){
 		audioCapture.StartStream();
 	}
 	capturing = true;

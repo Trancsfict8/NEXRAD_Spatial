@@ -37,3 +37,16 @@ Upgrading OpenStorm from Unreal Engine 5.2 to 5.7 involved several breaking API 
 3.  **Windows API Conflicts**: Unreal 5.7 overhauled `MinimalWindowsApi.h`. We resolved strict redefinitions of `LoadLibraryW` and `FreeLibrary` in `Native.cpp`.
 4.  **HTTP Module Updates**: Migrated `RadarDataDownloader.cpp` to use the new `OnRequestProgress64` callback signature (which tracks bytes as 64-bit integers instead of 32-bit). We also resolved the deprecated `Failed_ConnectionError` enum.
 5.  **Strict Compiler Warnings (C4702 & C4701)**: UE 5.7 enabled MSVC warnings-as-errors by default. The legacy `rsl` C-library had hundreds of "Unreachable Code" and "Potentially uninitialized variable" warnings. We explicitly injected `#pragma warning(disable: 4702)` and `4701` at the top of the offending C++ files (`Globe.cpp`, `volume.cpp`, `wsr88d_get_site.cpp`, etc.) to force the compiler to ignore them without breaking the library.
+6.  **VR Interactive Probe / Inspector Tool**: 
+    *   **Feature**: Implemented an interactive sphere attached to the VR controller that probes the 3D volume rendering and extracts the exact DbZ value that it intersects in 3D space. 
+    *   **Stumble - Text Scaling**: The dynamic floating text on the probe became unreadable at a distance or blended into the bright storms. 
+    *   **Fix**: Migrated away from deprecated static `SetXScale` to dynamically updating `SetWorldSize` tied to controller distance. Added a dual-layered `UTextRenderComponent` approach to create a solid black text drop-shadow for contrast.
+    *   **Stumble - Probe Axis & Extraction Mapping**: The right joystick allowed unintended Z/Y translation that broke immersion, and data extraction occasionally returned -2.0 or clear-air readings in storm cores.
+    *   **Fix**: Isolated rotation controls strictly to the Yaw axis. Mapped extraction data cleanly by fixing mirrored polar coordinate math (reversing the Y polarity and utilizing proper atan2 logic for Azimuth matching) so the physical UE5 space matches the spatial layout of the DBZ array.
+7.  **VR Input Bindings & Oculus Support**:
+    *   **Feature**: Added a "Hold Left X + Right Joystick" mechanic to dynamically push/pull the inspector tool distance.
+    *   **Stumble - Unresponsive Inputs**: Attempting to directly bind `EKeys::Gamepad_FaceButton_Left` via C++ was silently failing to fire on standard VR headsets.
+    *   **Fix**: Overhauled input by adding explicitly defined `ActionMappings` in `DefaultInput.ini` (e.g. `OculusTouch_Left_X_Click`, `ValveIndex_Left_A_Click`) and binding the action by name via `BindAction()`.
+8.  **Engine & API Deprecation Cleansing**:
+    *   **Stumble - Deprecation Pileup**: During upgrades, UE5.4+ audio APIs and standard library updates triggered dozens of severe deprecation warnings that threatened future compatibility.
+    *   **Fix**: Migrated audio code in `Joke.cpp` to `FOnAudioCaptureFunction` and `OpenAudioCaptureStream` (and fixed a subtle compiler error by correctly swapping to `const void*` buffers). Resolved C++17 `std::codecvt_utf8` deprecations, and patched `UnrealImGui` plugin array deprecations (replacing `false` with `EAllowShrinking::No`).

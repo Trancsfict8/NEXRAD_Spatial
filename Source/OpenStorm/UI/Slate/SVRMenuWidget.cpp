@@ -11,6 +11,7 @@
 #include "Widgets/Layout/SSeparator.h"
 #include "Widgets/SBoxPanel.h"
 #include "../../Objects/RadarGameStateBase.h"
+#include "../../Objects/RadarViewPawn.h"
 #include "../../Application/GlobalState.h"
 #include "../../Radar/Globe.h"
 #include "../../Radar/NexradSites/NexradSites.h"
@@ -382,6 +383,12 @@ TSharedRef<SWidget> SVRMenuWidget::BuildRadarTab()
 			MakeCheckbox(TEXT("Temporal Interpolation"), 
 				[this]() { return GetGlobalState() && GetGlobalState()->temporalInterpolation; }, 
 				[this](bool v) { if (GetGlobalState()) GetGlobalState()->temporalInterpolation = v; })
+		]
+		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
+		[
+			MakeCheckbox(TEXT("Inspector Tool (Scroll to Move)"), 
+				[this]() { return GetGlobalState() && GetGlobalState()->bInspectorEnabled; }, 
+				[this](bool v) { if (GetGlobalState()) GetGlobalState()->bInspectorEnabled = v; })
 		];
 }
 
@@ -457,9 +464,9 @@ TSharedRef<SWidget> SVRMenuWidget::BuildGPSTab()
 									TSharedPtr<FJsonObject> jsonObject;
 									TSharedRef<TJsonReader<>> reader = TJsonReaderFactory<>::Create(content);
 									if (FJsonSerializer::Deserialize(reader, jsonObject) && jsonObject.IsValid()) {
-										if (jsonObject->HasField("lat") && jsonObject->HasField("lon")) {
-											gs->teleportLatitude = jsonObject->GetNumberField("lat");
-											gs->teleportLongitude = jsonObject->GetNumberField("lon");
+										if (jsonObject->HasField(TEXT("lat")) && jsonObject->HasField(TEXT("lon"))) {
+											gs->teleportLatitude = jsonObject->GetNumberField(TEXT("lat"));
+											gs->teleportLongitude = jsonObject->GetNumberField(TEXT("lon"));
 											gs->EmitEvent("TeleportCamera");
 										}
 									}

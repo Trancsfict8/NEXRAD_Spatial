@@ -82,6 +82,26 @@ public:
 	void VRScrollRotateX(float value);
 	void VRScrollRotateY(float value);
 	void ToggleVRMenu();
+	
+	bool isButtonXHeld = false;
+	void ButtonXPressed() { isButtonXHeld = true; }
+	void ButtonXReleased() { isButtonXHeld = false; }
+	
+	// Inspector Tool
+	UPROPERTY(VisibleAnywhere)
+	class UStaticMeshComponent* inspectorMesh = NULL;
+	UPROPERTY(VisibleAnywhere)
+	class UTextRenderComponent* inspectorText = NULL;
+	UPROPERTY(VisibleAnywhere)
+	class UTextRenderComponent* inspectorTextShadow = NULL;
+	UPROPERTY(VisibleAnywhere)
+	class UTextRenderComponent* inspectorTooltip = NULL;
+	UPROPERTY(VisibleAnywhere)
+	class UTextRenderComponent* inspectorTooltipShadow = NULL;
+	
+	float inspectorDistance = 500.0f; // 5 km default distance
+	
+	void BuildVRAvatar();
 
 	void GripLeft(float value);
 	void GripRight(float value);
@@ -134,4 +154,6 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "VR")
 	UWidgetInteractionComponent* widgetInteraction;
+	
+	void AutoLocateAndEnableRadar();
 };

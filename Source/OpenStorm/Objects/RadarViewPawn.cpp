@@ -2,6 +2,7 @@
 
 
 #include "RadarViewPawn.h"
+#include "RadarVolumeRender.h"
 #include "RadarGameStateBase.h"
 #include "Kismet/GameplayStatics.h"
 #include "UObject/ConstructorHelpers.h"
@@ -25,7 +26,14 @@
 #include "Components/WidgetComponent.h"
 #include "Components/WidgetInteractionComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Components/SphereComponent.h"
+#include "Components/TextRenderComponent.h"
 #include "Engine/StaticMesh.h"
+#include "HttpModule.h"
+#include "Interfaces/IHttpRequest.h"
+#include "Interfaces/IHttpResponse.h"
+#include "Serialization/JsonReader.h"
+#include "Serialization/JsonSerializer.h"
 
 
 
@@ -106,6 +114,52 @@ void ARadarViewPawn::BeginPlay()
 	widgetInteraction->RegisterComponent();
 	widgetInteraction->TraceChannel = ECollisionChannel::ECC_Visibility;
 	widgetInteraction->InteractionSource = EWidgetInteractionSource::World;
+
+	inspectorMesh = NewObject<UStaticMeshComponent>(this, TEXT("InspectorMesh"));
+	inspectorMesh->SetupAttachment(RootComponent);
+	inspectorMesh->SetStaticMesh(Cast<UStaticMesh>(StaticLoadObject(UStaticMesh::StaticClass(), NULL, TEXT("StaticMesh'/Engine/BasicShapes/Sphere.Sphere'"))));
+	inspectorMesh->RegisterComponent();
+	inspectorMesh->SetWorldScale3D(FVector(0.02f));
+	inspectorMesh->SetVisibility(false);
+	inspectorMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	
+	inspectorText = NewObject<UTextRenderComponent>(this, TEXT("InspectorText"));
+	inspectorText->SetupAttachment(inspectorMesh);
+	inspectorText->RegisterComponent();
+	inspectorText->SetRelativeLocation(FVector(0, 0, 100));
+	inspectorText->SetVisibility(false);
+	inspectorText->SetTextRenderColor(FColor::White);
+	inspectorText->SetWorldSize(150.0f);
+	inspectorText->SetHorizontalAlignment(EHTA_Center);
+	
+	inspectorTextShadow = NewObject<UTextRenderComponent>(this, TEXT("InspectorTextShadow"));
+	inspectorTextShadow->SetupAttachment(inspectorText);
+	inspectorTextShadow->RegisterComponent();
+	inspectorTextShadow->SetRelativeLocation(FVector(-1.5f, 1.5f, -1.5f));
+	inspectorTextShadow->SetVisibility(false);
+	inspectorTextShadow->SetTextRenderColor(FColor::Black);
+	inspectorTextShadow->SetWorldSize(160.0f);
+	inspectorTextShadow->SetHorizontalAlignment(EHTA_Center);
+	
+	inspectorTooltip = NewObject<UTextRenderComponent>(this, TEXT("InspectorTooltip"));
+	inspectorTooltip->SetupAttachment(inspectorText);
+	inspectorTooltip->RegisterComponent();
+	inspectorTooltip->SetRelativeLocation(FVector(0, 0, -125.0f));
+	inspectorTooltip->SetVisibility(false);
+	inspectorTooltip->SetTextRenderColor(FColor(200, 200, 200));
+	inspectorTooltip->SetWorldSize(60.0f);
+	inspectorTooltip->SetHorizontalAlignment(EHTA_Center);
+	inspectorTooltip->SetText(FText::FromString(TEXT("Hold Left 'X' + Right Joystick\nto adjust distance")));
+
+	inspectorTooltipShadow = NewObject<UTextRenderComponent>(this, TEXT("InspectorTooltipShadow"));
+	inspectorTooltipShadow->SetupAttachment(inspectorTooltip);
+	inspectorTooltipShadow->RegisterComponent();
+	inspectorTooltipShadow->SetRelativeLocation(FVector(-1.0f, 1.0f, -1.0f));
+	inspectorTooltipShadow->SetVisibility(false);
+	inspectorTooltipShadow->SetTextRenderColor(FColor::Black);
+	inspectorTooltipShadow->SetWorldSize(65.0f);
+	inspectorTooltipShadow->SetHorizontalAlignment(EHTA_Center);
+	inspectorTooltipShadow->SetText(FText::FromString(TEXT("Hold Left 'X' + Right Joystick\nto adjust distance")));
 	widgetInteraction->InteractionDistance = 100000.0f;
 	widgetInteraction->bShowDebug = false;
 	widgetInteraction->SetRelativeLocation(FVector(3.0f, 0.0f, -4.0f));
@@ -160,6 +214,8 @@ void ARadarViewPawn::BeginPlay()
 			}
 		}));
 	}
+	
+	AutoLocateAndEnableRadar();
 }
 
 void ARadarViewPawn::EndPlay(const EEndPlayReason::Type endPlayReason) {
@@ -230,6 +286,147 @@ void ARadarViewPawn::Tick(float deltaTime)
 			bWasClicked = false;
 			widgetInteraction->ReleasePointerKey(EKeys::LeftMouseButton);
 		}
+		
+		// Inspector logic
+		if (globalState->bInspectorEnabled) {
+			if (!inspectorMesh->IsVisible()) {
+				inspectorMesh->SetVisibility(true);
+				inspectorText->SetVisibility(true);
+				inspectorTextShadow->SetVisibility(true);
+				inspectorTooltip->SetVisibility(true);
+				inspectorTooltipShadow->SetVisibility(true);
+			}
+			
+			FVector startPos = widgetInteraction->GetComponentLocation();
+			FVector forwardDir = widgetInteraction->GetForwardVector();
+			
+			FVector probePos = startPos + forwardDir * inspectorDistance;
+			inspectorMesh->SetWorldLocation(probePos);
+			
+			FString infoStr = TEXT("No Data");
+			
+			if (ARadarVolumeRender::instance != nullptr && ARadarVolumeRender::instance->radarData != nullptr) {
+				RadarData* data = ARadarVolumeRender::instance->radarData;
+				if (data->buffer != nullptr) {
+					FVector radarPos = ARadarVolumeRender::instance->GetActorLocation();
+					FVector worldOffset = probePos - radarPos;
+					
+					// worldOffset is in Unreal units. 1 Unreal unit = 100 meters.
+					float localRadiusUnits = FMath::Sqrt(worldOffset.X * worldOffset.X + worldOffset.Y * worldOffset.Y);
+					float radiusMeters = localRadiusUnits * 100.0f;
+					
+					float radiusIndexFloat = (radiusMeters / data->stats.pixelSize) - data->stats.innerDistance;
+					
+					float thetaAngle = FMath::RadiansToDegrees(FMath::Atan2(worldOffset.Y, worldOffset.X)) + 90.0f;
+					if (thetaAngle < 0.0f) thetaAngle += 360.0f;
+					if (thetaAngle >= 360.0f) thetaAngle -= 360.0f;
+					
+					float vScale = FMath::Max(globalState->verticalScale, 0.001f);
+					float trueZ = worldOffset.Z / vScale;
+					float elevationAngle = FMath::RadiansToDegrees(FMath::Atan2(trueZ, localRadiusUnits));
+					
+					int sweepIndex = -1;
+					int thetaIndex = -1;
+					int radiusIndex = FMath::Clamp(FMath::RoundToInt(radiusIndexFloat), 0, data->radiusBufferCount - 1);
+					
+					if (radiusIndex >= 0 && radiusIndex < data->radiusBufferCount) {
+						int bestSweep = -1;
+						float minSweepDiff = 999.0f;
+						for (int i = 0; i < data->sweepBufferCount; i++) {
+							if (data->sweepInfo[i].id != -1) {
+								float diff = FMath::Abs(data->sweepInfo[i].elevationAngle - elevationAngle);
+								if (diff < minSweepDiff) {
+									minSweepDiff = diff;
+									bestSweep = i;
+								}
+							}
+						}
+						sweepIndex = bestSweep;
+						
+						if (sweepIndex != -1) {
+							int rayInfoOffset = (data->thetaBufferCount + 2) * sweepIndex + 1;
+							float minRayDiff = 999.0f;
+							int bestI = -1;
+							for (int i = 0; i < data->thetaBufferCount; i++) {
+								RadarData::RayInfo& ray = data->rayInfo[rayInfoOffset + i];
+								if (!ray.interpolated) {
+									float diff = FMath::Abs(ray.actualAngle - thetaAngle);
+									if (diff > 180.0f) diff = 360.0f - diff;
+									if (diff < minRayDiff) {
+										minRayDiff = diff;
+										bestI = i;
+									}
+								}
+							}
+							
+							float heightAGLMeters = trueZ * 100.0f;
+							float heightAGLFeet = heightAGLMeters * 3.28084f;
+							
+							if (bestI != -1) {
+								float maxVal = -999.0f;
+								bool foundData = false;
+								
+								int radiusRange = 2; // search +/- 2 gates
+								int thetaRange = 2;  // search +/- 2 rays
+								int sweepRange = 1;  // search +/- 1 sweep to account for spatial interpolation gaps
+								
+								for (int s = FMath::Max(0, sweepIndex - sweepRange); s <= FMath::Min(data->sweepBufferCount - 1, sweepIndex + sweepRange); s++) {
+									for (int t = bestI - thetaRange; t <= bestI + thetaRange; t++) {
+										int safeT = t;
+										if (safeT < 0) safeT += data->thetaBufferCount;
+										if (safeT >= data->thetaBufferCount) safeT -= data->thetaBufferCount;
+										
+										for (int r = FMath::Max(0, radiusIndex - radiusRange); r <= FMath::Min(data->radiusBufferCount - 1, radiusIndex + radiusRange); r++) {
+											int bufferIndex = s * data->sweepBufferSize + (safeT + 1) * data->thetaBufferSize + r;
+											if (bufferIndex >= 0 && bufferIndex < data->fullBufferSize) {
+												float val = data->buffer[bufferIndex];
+												if (val != data->stats.noDataValue) {
+													if (!foundData || val > maxVal) {
+														maxVal = val;
+														foundData = true;
+													}
+												}
+											}
+										}
+									}
+								}
+								
+								if (foundData) {
+									infoStr = FString::Printf(TEXT("%.1f dBZ\n%.0f ft AGL"), maxVal, heightAGLFeet);
+								} else {
+									infoStr = FString::Printf(TEXT("No Data\n%.0f ft AGL"), heightAGLFeet);
+								}
+							} else {
+								infoStr = FString::Printf(TEXT("No Data\n%.0f ft AGL"), heightAGLFeet);
+							}
+						}
+					}
+				}
+			}
+			
+			inspectorText->SetText(FText::FromString(infoStr));
+			inspectorTextShadow->SetText(FText::FromString(infoStr));
+			
+			// make text face camera
+			FVector textPos = inspectorText->GetComponentLocation();
+			FVector camPos = camera->GetComponentLocation();
+			FRotator textRot = (camPos - textPos).Rotation();
+			inspectorText->SetWorldRotation(textRot);
+			
+			float dist = FVector::Dist(camPos, textPos);
+			float newScale = FMath::Max(0.1f, dist / 2000.0f);
+			inspectorText->SetWorldScale3D(FVector(newScale));
+			
+		} else {
+			if (inspectorMesh->IsVisible()) {
+				inspectorMesh->SetVisibility(false);
+				inspectorText->SetVisibility(false);
+				inspectorTextShadow->SetVisibility(false);
+				inspectorTooltip->SetVisibility(false);
+				inspectorTooltipShadow->SetVisibility(false);
+			}
+		}
+
 	}
 
 
@@ -307,6 +504,51 @@ ARadarViewPawn::~ARadarViewPawn(){
 	}*/
 }
 
+void ARadarViewPawn::AutoLocateAndEnableRadar() {
+	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> httpRequest = FHttpModule::Get().CreateRequest();
+	httpRequest->SetURL("http://ip-api.com/json/");
+	httpRequest->SetVerb("GET");
+	httpRequest->OnProcessRequestComplete().BindLambda([this](FHttpRequestPtr Request, FHttpResponsePtr Response, bool bSuccess){
+		if(bSuccess && Response.IsValid()){
+			FString content = Response->GetContentAsString();
+			TSharedPtr<FJsonObject> jsonObject;
+			TSharedRef<TJsonReader<>> reader = TJsonReaderFactory<>::Create(content);
+			if (FJsonSerializer::Deserialize(reader, jsonObject) && jsonObject.IsValid()) {
+				if (jsonObject->HasField(TEXT("lat")) && jsonObject->HasField(TEXT("lon"))) {
+					float lat = jsonObject->GetNumberField(TEXT("lat"));
+					float lon = jsonObject->GetNumberField(TEXT("lon"));
+					
+					if (ARadarGameStateBase* GS = GetWorld()->GetGameState<ARadarGameStateBase>()) {
+						GS->globalState.teleportLatitude = lat;
+						GS->globalState.teleportLongitude = lon;
+						GS->globalState.EmitEvent("TeleportCamera");
+						
+						// Find nearest site
+						float minDist = 999999.0f;
+						const char* bestSite = nullptr;
+						for (int i = 0; i < NexradSites::numberOfSites; i++) {
+							float dLat = NexradSites::sites[i].latitude - lat;
+							float dLon = NexradSites::sites[i].longitude - lon;
+							float dist = dLat*dLat + dLon*dLon;
+							if (dist < minDist) {
+								minDist = dist;
+								bestSite = NexradSites::sites[i].name;
+							}
+						}
+						
+						if (bestSite != nullptr) {
+							GS->globalState.downloadSiteId = std::string(bestSite);
+							GS->globalState.downloadData = true;
+							GS->globalState.pollData = true;
+						}
+					}
+				}
+			}
+		}
+	});
+	httpRequest->ProcessRequest();
+}
+
 template <class T>
 T* ARadarViewPawn::FindActor() {
 	TArray<AActor*> FoundActors = {};
@@ -339,7 +581,8 @@ void ARadarViewPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 	
 	PlayerInputComponent->BindKey(EKeys::Gamepad_Special_Left, IE_Pressed, this, &ARadarViewPawn::ToggleVRMenu);
 	PlayerInputComponent->BindKey(EKeys::Gamepad_FaceButton_Top, IE_Pressed, this, &ARadarViewPawn::ToggleVRMenu);
-	PlayerInputComponent->BindKey(EKeys::Gamepad_FaceButton_Left, IE_Pressed, this, &ARadarViewPawn::ToggleVRMenu);
+	PlayerInputComponent->BindAction("HoldDistanceAdjust", IE_Pressed, this, &ARadarViewPawn::ButtonXPressed);
+	PlayerInputComponent->BindAction("HoldDistanceAdjust", IE_Released, this, &ARadarViewPawn::ButtonXReleased);
 	PlayerInputComponent->BindAction("ToggleVRMenu", IE_Pressed, this, &ARadarViewPawn::ToggleVRMenu);
 
 	PlayerInputComponent->BindAxis("VRGripLeft", this, &ARadarViewPawn::GripLeft);
@@ -468,8 +711,13 @@ void ARadarViewPawn::VRScrollRotateY(float value) {
 			accumulatedScrollY = 0.0f;
 		}
 	} else {
-		// If we are not pointing at the menu, we don't map Y to vertical rotation in VR
-		// since head movement handles pitch. So do nothing or map to zoom/etc.
+		ARadarGameStateBase* GS = GetWorld()->GetGameState<ARadarGameStateBase>();
+		if (GS && GS->globalState.bInspectorEnabled && FMath::Abs(value) > 0.1f) {
+			if (isButtonXHeld) {
+				// adjust inspector distance with lower sensitivity
+				inspectorDistance = FMath::Clamp(inspectorDistance + value * 10.0f, 10.0f, 5000.0f);
+			}
+		}
 	}
 }
 

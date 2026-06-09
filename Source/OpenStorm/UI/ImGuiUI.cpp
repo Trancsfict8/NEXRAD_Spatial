@@ -463,9 +463,9 @@ void ImGuiUI::MainUI()
 							TSharedPtr<FJsonObject> jsonObject;
 							TSharedRef<TJsonReader<>> reader = TJsonReaderFactory<>::Create(content);
 							if (FJsonSerializer::Deserialize(reader, jsonObject) && jsonObject.IsValid()) {
-								if (jsonObject->HasField("lat") && jsonObject->HasField("lon")) {
-									gsPtr->teleportLatitude = jsonObject->GetNumberField("lat");
-									gsPtr->teleportLongitude = jsonObject->GetNumberField("lon");
+								if (jsonObject->HasField(TEXT("lat")) && jsonObject->HasField(TEXT("lon"))) {
+									gsPtr->teleportLatitude = jsonObject->GetNumberField(TEXT("lat"));
+									gsPtr->teleportLongitude = jsonObject->GetNumberField(TEXT("lon"));
 									gsPtr->EmitEvent("TeleportCamera");
 								}
 							}
