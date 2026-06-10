@@ -80,6 +80,7 @@ public:
 	float quality = 0.0f; // a float representing quality with 0 being normal
 	float qualityCustomStepSize = 5.0f; // if quality is set to 10 this value is used
 	float verticalScale = 1.0f; // multiply vertical scale
+	float elevationExaggeration = 1.0f; // multiply elevation map height
 	float audioControlMultiplier = 5.0f;
 	bool enableMap = true; // if the globe should be rendered
 	bool realLifeScale = false; // toggle for true 1:1 real world scaling

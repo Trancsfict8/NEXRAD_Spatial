@@ -692,7 +692,7 @@ Radar *RSL_uf_to_radar(char *infile)
     //save_fd = dup(0);
     //fp = fdopen(save_fd, "r");
     fp = stdin;
-  }  else if ((fp = fopen(infile, "r")) == NULL) {
+  }  else if ((fp = fopen(infile, "rb")) == NULL) {
     perror(infile);
     return radar;
   }

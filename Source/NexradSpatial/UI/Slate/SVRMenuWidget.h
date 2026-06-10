@@ -28,7 +28,8 @@ private:
 		GPS,
 		Map,
 		Settings,
-		Legal
+		Legal,
+		Controls
 	};
 
 	EVRMenuTab ActiveTab;
@@ -48,4 +49,5 @@ private:
 	TSharedRef<SWidget> BuildMapTab();
 	TSharedRef<SWidget> BuildSettingsTab();
 	TSharedRef<SWidget> BuildLegalTab();
+	TSharedRef<SWidget> BuildControlsTab();
 };

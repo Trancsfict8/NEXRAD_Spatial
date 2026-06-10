@@ -62,4 +62,7 @@ public:
 	
 	// get location in radians from point in game units
 	SimpleVector3<> GetLocationScaled(SimpleVector3<> point);
+	
+	// get geodetic coordinates (X=Lat Degrees, Y=Lon Degrees, Z=Alt Meters) from point in game units
+	SimpleVector3<> GetLatLonAltDegrees(SimpleVector3<> point);
 };

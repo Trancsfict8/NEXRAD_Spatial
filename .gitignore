@@ -22,3 +22,4 @@ tmp
 /Source/OpenStorm/Radar/Deps/hdf5
 /Plugins/UnrealHDF5
 /Plugins/VarjoOpenXR
+/tiles/*

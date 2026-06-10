@@ -21,7 +21,7 @@ int Nexrad::RecompressArchive(std::string inFileName, std::string outFileName){
 		_set_fmode(_O_BINARY);
 	#endif // _WIN32
 	
-	FILE* inFile = fopen(inFileName.c_str(), "r");
+	FILE* inFile = fopen(inFileName.c_str(), "rb");
 	if (inFile == NULL){
 		fprintf(stderr,"failed open file for recompression\n");
 		return -1;
@@ -52,7 +52,7 @@ int Nexrad::RecompressArchive(std::string inFileName, std::string outFileName){
 	}
 	fclose(inFile);
 	// reopen the file
-	inFile = fopen(inFileName.c_str(), "r");
+	inFile = fopen(inFileName.c_str(), "rb");
 	// decompress
 	if(isGzip){
 		inFile = uncompress_pipe_gzip(inFile);
@@ -80,7 +80,7 @@ int Nexrad::DecompressArchive(std::string inFileName, std::string outFileName){
 		_set_fmode(_O_BINARY);
 	#endif // _WIN32
 	
-	FILE* inFile = fopen(inFileName.c_str(), "r");
+	FILE* inFile = fopen(inFileName.c_str(), "rb");
 	if (inFile == NULL){
 		fprintf(stderr,"failed open file for decompression: %s\n", inFileName.c_str());
 		return -1;
@@ -111,7 +111,7 @@ int Nexrad::DecompressArchive(std::string inFileName, std::string outFileName){
 	}
 	fclose(inFile);
 	// reopen the file
-	inFile = fopen(inFileName.c_str(), "r");
+	inFile = fopen(inFileName.c_str(), "rb");
 	// decompress
 	if(isGzip){
 		inFile = uncompress_pipe_gzip(inFile);

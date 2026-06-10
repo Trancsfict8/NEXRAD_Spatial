@@ -20,6 +20,7 @@
 #include "Data/ElevationData.h"
 #include "Data/TileProvider.h"
 #include "MapMeshManager.h"
+#include "../Objects/RadarGameStateBase.h"
 
 #include <cmath>
 #include <algorithm>
@@ -287,7 +288,14 @@ void AMapMesh::GenerateMesh(){
 			);
 			
 			
-			vert.radius() = ElevationData::GetDataAtPointRadians(vert.phi(), vert.theta());
+			float elevExag = 1.0f;
+			if(manager != NULL){
+				ARadarGameStateBase* gameMode = GetWorld()->GetGameState<ARadarGameStateBase>();
+				if(gameMode != NULL){
+					elevExag = gameMode->globalState.elevationExaggeration;
+				}
+			}
+			vert.radius() = ElevationData::GetDataAtPointRadians(vert.phi(), vert.theta()) * elevExag;
 			vert = globe->GetPointScaled(vert);
 			
 			//fprintf(stderr, "loc %f %f %f\n", vert.x, vert.y, vert.z);

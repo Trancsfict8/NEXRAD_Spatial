@@ -50,21 +50,20 @@ ALocationMarker::ALocationMarker()
 
 
 void ALocationMarker::BeginPlay() {
-	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = true;
 	Super::BeginPlay();
 	//SetColor(FVector(0,1.0f,0));
 }
 
 void ALocationMarker::Tick(float DeltaTime) {
-	// auto camera = Cast<UCameraComponent>(GetWorld()->GetFirstPlayerController()->GetPawn()->GetComponentByClass(UCameraComponent::StaticClass()));
-	// if (camera != NULL) {
-	// 	//FVector playerLocation = camera->GetComponentLocation();
-	// 	//FVector selfLocation = GetActorLocation();
-	// 	//FRotator rotation = FRotationMatrix::MakeFromX(playerLocation - selfLocation).Rotator();
-	// 	//SetActorRotation(rotation);
-	// 	SetActorRotation(camera->GetComponentRotation());
-	// }
-	
+	Super::Tick(DeltaTime);
+	auto camera = Cast<UCameraComponent>(GetWorld()->GetFirstPlayerController()->GetPawn()->GetComponentByClass(UCameraComponent::StaticClass()));
+	if (camera != NULL) {
+		FVector playerLocation = camera->GetComponentLocation();
+		FVector selfLocation = GetActorLocation();
+		FRotator rotation = FRotationMatrix::MakeFromX(selfLocation - playerLocation).Rotator();
+		SetActorRotation(rotation);
+	}
 }
 
 void ALocationMarker::SetText(std::string text) {

@@ -159,5 +159,15 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "VR")
 	UWidgetInteractionComponent* widgetInteraction;
 	
+	// Legacy fallback variables for hardware bindings
+	bool bIsInterrogatorHeld = false;
+	float interrogatorHoldTimer = 0.0f;
+	void InterrogatorPressed();
+	void InterrogatorReleased();
+	void InterrogateSpatialTriggered();
+
+	TArray<class ALocationMarker*> spawnedMarkers;
+	void RemoveLastMarker();
+
 	void AutoLocateAndEnableRadar();
 };

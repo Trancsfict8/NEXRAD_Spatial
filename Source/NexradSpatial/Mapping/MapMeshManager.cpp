@@ -115,12 +115,12 @@ void AMapMeshManager::EnableMap(){
 	
 	ElevationData::StartUsing();
 	
-	std::string staticCacheLocation = StringUtils::GetRelativePath(TEXT("Content/Data/Map/Tiles/ImageryOnly/"));
-	std::string staticCacheTarLocation = StringUtils::GetRelativePath(TEXT("Content/Data/Map/Tiles/ImageryOnly.tar"));
-	std::string dynamicCacheLocation = StringUtils::GetUserPath(TEXT("Map/Tiles/USGSImageryOnly/"));
+	std::string staticCacheLocation = StringUtils::GetRelativePath(TEXT("Content/Data/Map/Tiles/GoogleHybridMap/"));
+	std::string staticCacheTarLocation = StringUtils::GetRelativePath(TEXT("Content/Data/Map/Tiles/GoogleHybridMap.tar")); 
+	std::string dynamicCacheLocation = StringUtils::GetUserPath(TEXT("Map/Tiles/GoogleHybridMap/"));
 	fprintf(stderr, "path %s\n", staticCacheLocation.c_str());
 	fprintf(stderr, "path %s\n", dynamicCacheLocation.c_str());
-	tileProvider = new TileProvider("USGSImageryOnly", "https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/{z}/{y}/{x}", "image/jpeg", 10);
+	tileProvider = new TileProvider("GoogleHybridMap", "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}", "image/jpeg", 12);
 	tileProvider->SetCache(staticCacheLocation, dynamicCacheLocation);
 	tileProvider->SetTarCache(staticCacheTarLocation);
 	

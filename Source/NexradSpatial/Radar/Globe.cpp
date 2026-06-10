@@ -91,3 +91,8 @@ SimpleVector3<> Globe::GetLocationScaled(SimpleVector3<> point){
 	vector = GetLocation(vector);
 	return vector;
 }
+
+SimpleVector3<> Globe::GetLatLonAltDegrees(SimpleVector3<> point){
+	SimpleVector3<> spherical = GetLocationScaled(point);
+	return SimpleVector3<>(spherical.phi() * 180.0 / M_PI, spherical.theta() * 180.0 / M_PI, spherical.radius());
+}

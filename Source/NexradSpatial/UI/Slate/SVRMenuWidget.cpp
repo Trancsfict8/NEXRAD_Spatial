@@ -128,6 +128,15 @@ void SVRMenuWidget::Construct(const FArguments& InArgs)
 						[ SNew(STextBlock).Text(FText::FromString("Legal")).Font(TabFont()).Justification(ETextJustify::Center).Margin(FMargin(0, 12)) ]
 					]
 				]
+				+ SHorizontalBox::Slot().FillWidth(1)
+				[
+					SNew(SBox).HeightOverride(60.0f)
+					[
+						SNew(SButton)
+						.OnClicked_Lambda([this]() { ActiveTab = EVRMenuTab::Controls; Invalidate(EInvalidateWidgetReason::Layout); return FReply::Handled(); })
+						[ SNew(STextBlock).Text(FText::FromString("Controls")).Font(TabFont()).Justification(ETextJustify::Center).Margin(FMargin(0, 12)) ]
+					]
+				]
 			]
 
 			// ── Content area (scrollable) ────────────────────────────────
@@ -198,6 +207,18 @@ void SVRMenuWidget::Construct(const FArguments& InArgs)
 						.Visibility_Lambda([this]() { return ActiveTab == EVRMenuTab::Legal ? EVisibility::Visible : EVisibility::Collapsed; })
 						[
 							BuildLegalTab()
+						]
+					]
+
+					// ── CONTROLS TAB ──────────────────────────────────────
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					.Padding(FMargin(12, 8))
+					[
+						SNew(SBox)
+						.Visibility_Lambda([this]() { return ActiveTab == EVRMenuTab::Controls ? EVisibility::Visible : EVisibility::Collapsed; })
+						[
+							BuildControlsTab()
 						]
 					]
 				]
@@ -431,6 +452,13 @@ TSharedRef<SWidget> SVRMenuWidget::BuildRadarTab()
 				[this]() { return GetGlobalState() ? (GetGlobalState()->verticalScale - 1.0f) / 3.0f : 0.0f; },
 				[this](float v) { if (GetGlobalState()) GetGlobalState()->verticalScale = 1.0f + (v * 3.0f); }, 
 				TEXT("Height Exaggeration: {0}"))
+		]
+		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
+		[
+			MakeSlider(TEXT("Elevation Exaggeration"), 
+				[this]() { return GetGlobalState() ? (GetGlobalState()->elevationExaggeration - 1.0f) / 3.0f : 0.0f; },
+				[this](float v) { if (GetGlobalState()) GetGlobalState()->elevationExaggeration = 1.0f + (v * 3.0f); }, 
+				TEXT("Elevation Exaggeration: {0}"))
 		]
 		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
 		[
@@ -707,6 +735,14 @@ TSharedRef<SWidget> SVRMenuWidget::BuildSettingsTab()
 
 		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
 		[
+			MakeSlider(TEXT("Elevation Exaggeration"), 
+				[this]() { return GetGlobalState() ? (GetGlobalState()->elevationExaggeration - 1.0f) / 3.0f : 0.0f; },
+				[this](float v) { if (GetGlobalState()) GetGlobalState()->elevationExaggeration = 1.0f + (v * 3.0f); }, 
+				TEXT("Elevation Exaggeration: {0}x"))
+		]
+
+		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
+		[
 			MakeSlider(TEXT("Map Brightness"), 
 				[this]() { return GetGlobalState() ? GetGlobalState()->mapBrightness : 0.0f; },
 				[this](float v) { if (GetGlobalState()) GetGlobalState()->mapBrightness = v; }, 
@@ -820,6 +856,34 @@ TSharedRef<SWidget> SVRMenuWidget::BuildLegalTab()
 		];
 }
 
+// ────────────────────────────────────────────────────────────────────────────
+// CONTROLS TAB
+// ────────────────────────────────────────────────────────────────────────────
+TSharedRef<SWidget> SVRMenuWidget::BuildControlsTab()
+{
+	FSlateFontInfo BodyFont = FCoreStyle::GetDefaultFontStyle("Regular", 16);
+	
+	return SNew(SVerticalBox)
+		+ SVerticalBox::Slot().AutoHeight()[ MakeLabel("VR Controls") ]
+		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0, 4))
+		[
+			SNew(STextBlock).Font(BodyFont).ColorAndOpacity(FLinearColor::White)
+			.Text(FText::FromString(
+				"Left Controller:\n"
+				"- Left Trigger: Grip/Grab Map\n"
+				"- Left Grip: Grip/Grab Map\n"
+				"- Left Thumbstick (Up/Down): Move Forward/Backward\n"
+				"- Left Thumbstick (Left/Right): Strafe Left/Right\n"
+				"- Y Button: Toggle VR Wrist Menu\n"
+				"- X Button (Hold): Adjust Inspector Distance (Right Thumbstick Y-Axis)\n\n"
+				"Right Controller:\n"
+				"- Right Trigger: Click / UI Interact\n"
+				"- Right Grip: Grip/Grab Map\n"
+				"- Right Thumbstick (Left/Right): Rotate Camera Left/Right\n"
+				"- A Button (Hold 1.0s): Spatial Interrogator (Extracts GPS + Street)\n"
+			))
+		];
+}
 // ────────────────────────────────────────────────────────────────────────────
 // GlobalState accessor (cached per-frame via world context)
 // ────────────────────────────────────────────────────────────────────────────

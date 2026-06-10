@@ -139,7 +139,7 @@ bool MiniRadRadarReader::LoadVolume(RadarData* radarData, RadarData::VolumeType 
 		return false;
 	}
 	//sizeof(ShapeFileHeader)
-	FILE* file = fopen(fileName.c_str(), "r");
+	FILE* file = fopen(fileName.c_str(), "rb");
 	if(file == NULL){
 		fprintf(stderr, "MiniRad.cpp(MiniRadRadarReader::LoadVolume) could not open minirad data file\n");
 		return false;

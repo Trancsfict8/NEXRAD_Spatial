@@ -368,6 +368,8 @@ void ImGuiUI::MainUI()
 				CustomFloatInput("Opacity", 0.2, 4, &globalState.opacityMultiplier, &globalState.defaults->opacityMultiplier);
 				SetCustomInputTooltip("Multiplies the height of the radar volume");
 				CustomFloatInput("Height Exaggeration", 1, 4, &globalState.verticalScale, &globalState.defaults->verticalScale);
+				SetCustomInputTooltip("Multiplies the height of the map terrain");
+				CustomFloatInput("Elevation Exaggeration", 1, 4, &globalState.elevationExaggeration, &globalState.defaults->elevationExaggeration);
 				
 				bool spatialInterpolationOldValue = globalState.spatialInterpolation;
 				ImGui::Checkbox("Spatial Interpolation", &globalState.spatialInterpolation);

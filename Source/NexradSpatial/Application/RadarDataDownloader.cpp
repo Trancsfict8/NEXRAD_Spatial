@@ -102,7 +102,7 @@ public:
 				if(outputFile != ""){
 					if(firstByte < 0 || !SystemAPI::GetFileStats(outputFile).exists){
 						// write new file
-						FILE* file = fopen(outputFile.c_str(), "w+");
+						FILE* file = fopen(outputFile.c_str(), "wb+");
 						if(file){
 							fwrite(buffer, 1, bufferSize, file);
 							fclose(file);
@@ -112,7 +112,7 @@ public:
 						}
 					}else{
 						// add section to file
-						FILE* file = fopen(outputFile.c_str(), "r+");
+						FILE* file = fopen(outputFile.c_str(), "rb+");
 						if(file){
 							fseek(file, firstByte, SEEK_SET);
 							fwrite(buffer, 1, bufferSize, file);

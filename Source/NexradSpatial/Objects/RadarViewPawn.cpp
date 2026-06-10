@@ -37,8 +37,8 @@
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 
-
-
+#include "Async/Async.h"
+#include "Engine/LocalPlayer.h"
 // Sets default values
 ARadarViewPawn::ARadarViewPawn()
 {
@@ -256,6 +256,17 @@ void ARadarViewPawn::Tick(float deltaTime)
 		GlobalState* globalState = &GS->globalState;
 		moveSpeed = globalState->moveSpeed * (1 + speedBoost * 3);
 		rotateSpeed = globalState->rotateSpeed;
+
+		if (bIsInterrogatorHeld) {
+			interrogatorHoldTimer += deltaTime;
+			if (interrogatorHoldTimer >= 1.0f) {
+				interrogatorHoldTimer = -9999.0f; // prevent firing multiple times per hold
+				UE_LOG(LogTemp, Warning, TEXT("[DEBUG] Spatial Interrogator 1.0s HOLD REACHED!"));
+				fprintf(stdout, "[DEBUG] Spatial Interrogator 1.0s HOLD REACHED!\n");
+				if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("Spatial Interrogator 1.0s HOLD REACHED!"));
+				InterrogateSpatialTriggered();
+			}
+		}
 
 
 	if (widgetInteraction) {
@@ -660,32 +671,37 @@ void ARadarViewPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 	
 	// Dynamic explicit VR bindings
 	PlayerInputComponent->BindAxis("VRTriggerLeft", this, &ARadarViewPawn::TriggerLeft);
+
+	// Spatial Interrogator bindings
+	PlayerInputComponent->BindAction("SpatialInterrogator", IE_Pressed, this, &ARadarViewPawn::InterrogatorPressed);
+	PlayerInputComponent->BindAction("SpatialInterrogator", IE_Released, this, &ARadarViewPawn::InterrogatorReleased);
+
+	PlayerInputComponent->BindKey(EKeys::Gamepad_FaceButton_Bottom, IE_Pressed, this, &ARadarViewPawn::RemoveLastMarker);
+}
+
+void ARadarViewPawn::RemoveLastMarker() {
+	if (spawnedMarkers.Num() > 0) {
+		ALocationMarker* marker = spawnedMarkers.Pop();
+		if (marker) {
+			marker->Destroy();
+		}
+	}
 }
 
 void ARadarViewPawn::MoveFB(float value)
 {
 	forwardMovement = value;
-	// auto Location = GetActorLocation();
-	// Location += camera->GetForwardVector() * value * MoveSpeed;
-	// SetActorLocation(Location);
 }
 
 void ARadarViewPawn::MoveLR(float value)
 {
 	sidewaysMovement = value;
-	// auto Location = GetActorLocation();
-	// Location += camera->GetRightVector() * value * MoveSpeed;
-	// SetActorLocation(Location);
 }
 
 void ARadarViewPawn::MoveUD(float value)
 {
 	verticalMovement = value;
-	// auto Location = GetActorLocation();
-	// Location.Z += value * MoveSpeed;
-	// SetActorLocation(Location);
 }
-
 
 void ARadarViewPawn::SpeedBoost(float value)
 {
@@ -695,10 +711,6 @@ void ARadarViewPawn::SpeedBoost(float value)
 void ARadarViewPawn::RotateUD(float value)
 {
 	verticalRotation = value;
-	// auto Rotation = GetActorRotation();
-	// Rotation.Pitch = FMath::Clamp(Rotation.Pitch + value * RotateSpeed, -89.0f, 89.0f);
-	// Rotation.Roll = 0;
-	// SetActorRotation(Rotation);
 }
 
 void ARadarViewPawn::RotateLR(float value)
@@ -801,5 +813,182 @@ void ARadarViewPawn::ToggleVRMenu() {
 	}
 }
 
+void ARadarViewPawn::InterrogatorPressed() { 
+	bIsInterrogatorHeld = true; 
+	interrogatorHoldTimer = 0.0f; 
+	UE_LOG(LogTemp, Warning, TEXT("[DEBUG] Spatial Interrogator PRESSED")); 
+	fprintf(stdout, "[DEBUG] Spatial Interrogator PRESSED\n"); 
+	if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, TEXT("Spatial Interrogator PRESSED")); 
+}
 
+void ARadarViewPawn::InterrogatorReleased() { 
+	bIsInterrogatorHeld = false; 
+	interrogatorHoldTimer = 0.0f; 
+	UE_LOG(LogTemp, Warning, TEXT("[DEBUG] Spatial Interrogator RELEASED")); 
+	fprintf(stdout, "[DEBUG] Spatial Interrogator RELEASED\n"); 
+	if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, TEXT("Spatial Interrogator RELEASED")); 
+}
+
+void ARadarViewPawn::InterrogateSpatialTriggered() {
+	UE_LOG(LogTemp, Warning, TEXT("[DEBUG] InterrogateSpatialTriggered Executing..."));
+	fprintf(stdout, "[DEBUG] InterrogateSpatialTriggered Executing...\n");
+	if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Cyan, TEXT("InterrogateSpatial Executing..."));
+
+	if (!widgetInteraction) {
+		UE_LOG(LogTemp, Error, TEXT("[DEBUG] widgetInteraction is NULL!"));
+		fprintf(stdout, "[DEBUG] widgetInteraction is NULL!\n");
+		if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("widgetInteraction is NULL!"));
+		return;
+	}
+
+	ARadarGameStateBase* GS = GetWorld()->GetGameState<ARadarGameStateBase>();
+	if (!GS || !GS->globalState.globe) {
+		UE_LOG(LogTemp, Error, TEXT("[DEBUG] Globe is NULL!"));
+		return;
+	}
+
+	Globe* globe = GS->globalState.globe;
+	FVector RayOrigin = widgetInteraction->GetComponentLocation();
+	FVector RayDir = widgetInteraction->GetForwardVector();
+	
+	FVector SphereCenter(globe->center.x * globe->scale, globe->center.y * globe->scale, globe->center.z * globe->scale);
+	double SphereRadius = globe->surfaceRadius * globe->scale;
+
+	// Mathematical Ray-Sphere Intersection
+	FVector L = SphereCenter - RayOrigin;
+	double tca = FVector::DotProduct(L, RayDir);
+	if (tca < 0) {
+		UE_LOG(LogTemp, Error, TEXT("[DEBUG] Laser is pointing AWAY from the globe! tca: %f"), tca);
+		fprintf(stdout, "[DEBUG] Laser is pointing AWAY from the globe!\n");
+		if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Laser Pointing Away from Globe"));
+		return;
+	}
+
+	double d2 = L.SizeSquared() - tca * tca;
+	double radius2 = SphereRadius * SphereRadius;
+	
+	if (d2 > radius2) {
+		UE_LOG(LogTemp, Error, TEXT("[DEBUG] Laser missed the globe entirely! d2: %f, r2: %f"), d2, radius2);
+		fprintf(stdout, "[DEBUG] Laser missed the globe entirely!\n");
+		if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Laser Missed Globe"));
+		return;
+	}
+
+	double thc = FMath::Sqrt(radius2 - d2);
+	double t0 = tca - thc;
+	double t1 = tca + thc;
+
+	double t = (t0 < t1) ? t0 : t1;
+	if (t < 0) {
+		t = (t0 < t1) ? t1 : t0;
+		if (t < 0) {
+			UE_LOG(LogTemp, Error, TEXT("[DEBUG] Inside globe, pointing away?"));
+			return;
+		}
+	}
+
+	FVector hitLocation = RayOrigin + RayDir * t;
+	
+	UE_LOG(LogTemp, Warning, TEXT("[DEBUG] Math Intersection Hit! Actor: GlobeSphere"));
+	fprintf(stdout, "[DEBUG] Math Intersection Hit! Actor: GlobeSphere\n");
+	if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, TEXT("Globe Mathematically Intersected!"));
+
+	SimpleVector3<double> point(hitLocation.X, hitLocation.Y, hitLocation.Z);
+	SimpleVector3<double> coords = globe->GetLatLonAltDegrees(point);
+			
+	float lat = coords.radius(); // X holds latitude
+	float lon = coords.theta();  // Y holds longitude
+
+	UE_LOG(LogTemp, Warning, TEXT("[DEBUG] Coords extracted: Lat %f, Lon %f"), lat, lon);
+	fprintf(stdout, "[DEBUG] Coords extracted: Lat %f, Lon %f\n", lat, lon);
+	if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Yellow, FString::Printf(TEXT("Lat: %f, Lon: %f"), lat, lon));
+
+	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = FHttpModule::Get().CreateRequest();
+		
+	TWeakObjectPtr<ARadarViewPawn> WeakThis(this);
+		
+	Request->OnProcessRequestComplete().BindLambda([WeakThis, lat, lon, hitLocation, SphereCenter](FHttpRequestPtr RequestPtr, FHttpResponsePtr Response, bool bWasSuccessful) {
+		if (!bWasSuccessful || !Response.IsValid()) {
+			UE_LOG(LogTemp, Error, TEXT("[DEBUG] API Request completely failed!"));
+			fprintf(stdout, "[DEBUG] API Request completely failed!\n");
+			AsyncTask(ENamedThreads::GameThread, [WeakThis]() {
+				if (WeakThis.IsValid()) {
+					if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("API Request Failed"));
+					WeakThis->inspectorTooltip->SetText(FText::FromString(TEXT("API Request Failed")));
+					WeakThis->inspectorTooltipShadow->SetText(FText::FromString(TEXT("API Request Failed")));
+				}
+			});
+			return;
+		}
+
+		FString ResponseString = Response->GetContentAsString();
+		UE_LOG(LogTemp, Warning, TEXT("[DEBUG] API Response Received: %d bytes"), ResponseString.Len());
+		fprintf(stdout, "[DEBUG] API Response Received: %d bytes\n", ResponseString.Len());
+
+		AsyncTask(ENamedThreads::AnyBackgroundThreadNormalTask, [WeakThis, ResponseString, lat, lon, hitLocation, SphereCenter]() {
+			TSharedPtr<FJsonObject> JsonObject;
+			TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(ResponseString);
+			FString FinalAddress = TEXT("Unknown Road");
+				
+			if (FJsonSerializer::Deserialize(Reader, JsonObject) && JsonObject.IsValid()) {
+				const TArray<TSharedPtr<FJsonValue>>* ElementsArray;
+				if (JsonObject->TryGetArrayField(TEXT("elements"), ElementsArray)) {
+					TArray<FString> StreetNames;
+					for (const TSharedPtr<FJsonValue>& ElementVal : *ElementsArray) {
+						TSharedPtr<FJsonObject> ElementObj = ElementVal->AsObject();
+						if (ElementObj.IsValid()) {
+							const TSharedPtr<FJsonObject>* TagsObj;
+							if (ElementObj->TryGetObjectField(TEXT("tags"), TagsObj)) {
+								FString StreetName;
+								if ((*TagsObj)->TryGetStringField(TEXT("name"), StreetName)) {
+									StreetNames.AddUnique(StreetName);
+								}
+							}
+						}
+					}
+					if (StreetNames.Num() > 0) {
+						if (StreetNames.Num() > 2) {
+							StreetNames.SetNum(2);
+						}
+						FinalAddress = FString::Join(StreetNames, TEXT(" & "));
+					}
+				}
+			}
+				
+			FString DisplayStr = FString::Printf(TEXT("Location: %s\nGPS: %.5f, %.5f"), *FinalAddress, lat, lon);
+
+			AsyncTask(ENamedThreads::GameThread, [WeakThis, DisplayStr, hitLocation, lat, lon, FinalAddress, SphereCenter]() {
+				if (WeakThis.IsValid()) {
+					WeakThis->inspectorTooltip->SetText(FText::FromString(DisplayStr));
+					WeakThis->inspectorTooltipShadow->SetText(FText::FromString(DisplayStr));
+
+					if (UWorld* World = WeakThis->GetWorld()) {
+						ALocationMarker* marker = World->SpawnActor<ALocationMarker>(ALocationMarker::StaticClass());
+						if (marker) {
+							FVector Normal = (hitLocation - SphereCenter).GetSafeNormal();
+							marker->SetActorLocation(hitLocation + Normal * 10.0f); // Raise slightly above the globe
+							marker->latitude = lat;
+							marker->longitude = lon;
+							marker->SetText(TCHAR_TO_UTF8(*FinalAddress));
+							marker->SetColor(FVector(1.0f, 0.5f, 0.0f));
+							marker->EnableCollision();
+							WeakThis->spawnedMarkers.Add(marker);
+						}
+					}
+				}
+			});
+		});
+	});
+
+	Request->SetURL(TEXT("https://overpass-api.de/api/interpreter"));
+	Request->SetVerb(TEXT("POST"));
+	Request->SetHeader(TEXT("Content-Type"), TEXT("application/x-www-form-urlencoded"));
+
+	FString Query = FString::Printf(TEXT("[out:json];way(around:50,%f,%f)[highway];node(w)->.intersectionNodes;way(bn.intersectionNodes)[highway];out tags;"), lat, lon);
+	Request->SetContentAsString(Query);
+	Request->ProcessRequest();
+		
+	inspectorTooltip->SetText(FText::FromString(TEXT("Fetching nearest road...")));
+	inspectorTooltipShadow->SetText(FText::FromString(TEXT("Fetching nearest road...")));
+}
 

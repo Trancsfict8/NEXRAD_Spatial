@@ -283,7 +283,7 @@ Wsr88d_file *wsr88d_open(char *filename)
 	//} else {
 	//	wf->fptr = fopen(filename, "r");
 	//}
-	wf->fptr = fopen(filename, "r");
+	wf->fptr = fopen(filename, "rb");
 
 	if (wf->fptr == NULL){
 		fprintf(stderr,"failed open file\n");
@@ -325,7 +325,7 @@ Wsr88d_file *wsr88d_open(char *filename)
 	//} else {
 	//	 wf->fptr = fopen(filename, "r");
 	//}
-	wf->fptr = fopen(filename, "r");
+	wf->fptr = fopen(filename, "rb");
  
 	
 
@@ -333,7 +333,7 @@ Wsr88d_file *wsr88d_open(char *filename)
 
 
 	/*
-	FILE* testFile = fopen(filename, "r");
+	FILE* testFile = fopen(filename, "rb");
 	int totalSize = 0;
 	int amountRead = 0;
 	char buf[1024] = {};
@@ -444,7 +444,7 @@ int wsr88d_read_tape_header(char *first_file,
 	int n;
 	char c;
 
-	if ((fp = fopen(first_file, "r")) == NULL) {
+	if ((fp = fopen(first_file, "rb")) == NULL) {
 		perror(first_file);
 		return 0;
 	}
