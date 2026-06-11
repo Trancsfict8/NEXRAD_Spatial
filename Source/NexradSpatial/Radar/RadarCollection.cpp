@@ -511,7 +511,19 @@ void RadarCollection::EventLoop() {
 				Move(lastMoveDirection);
 			}
 			// set next animate time taking into account how late this frame is
-			if (IsEndReached(1)) {
+			bool isOnLastFrame = (lastItemIndex == radarFiles.size() - 1 && cachedAfter == 0);
+			bool isOnLastFrameOther = (firstItemIndex == 0 && cachedBefore == 0);
+			if(autoAdvanceCacheOnly){
+				isOnLastFrame = cachedAfter == 0;
+				isOnLastFrameOther = cachedBefore == 0;
+			}
+			if(lastMoveDirection == -1){
+				bool tmp = isOnLastFrameOther;
+				isOnLastFrameOther = isOnLastFrame;
+				isOnLastFrame = tmp;
+			}
+			
+			if (isOnLastFrame) {
 				nextAdvanceTime = now + std::max(0.0, holdOnLastFrameInterval - (now - nextAdvanceTime));
 			} else {
 				nextAdvanceTime = now + std::max(0.0, autoAdvanceInterval - (now - nextAdvanceTime));
@@ -959,7 +971,19 @@ void RadarCollection::Emit(RadarDataHolder* holder) {
 	event.data = holder->radarData;
 	event.minTimeTillNext = 0.2;
 	if(automaticallyAdvance){
-		if (IsEndReached(1)) {
+		bool isOnLastFrame = (lastItemIndex == radarFiles.size() - 1 && cachedAfter == 0);
+		bool isOnLastFrameOther = (firstItemIndex == 0 && cachedBefore == 0);
+		if(autoAdvanceCacheOnly){
+			isOnLastFrame = cachedAfter == 0;
+			isOnLastFrameOther = cachedBefore == 0;
+		}
+		if(lastMoveDirection == -1){
+			bool tmp = isOnLastFrameOther;
+			isOnLastFrameOther = isOnLastFrame;
+			isOnLastFrame = tmp;
+		}
+		
+		if (isOnLastFrame) {
 			event.minTimeTillNext = holdOnLastFrameInterval;
 		} else {
 			event.minTimeTillNext = autoAdvanceInterval;

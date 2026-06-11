@@ -1,4 +1,5 @@
 #include "SVRMenuWidget.h"
+#include "Engine/Engine.h"
 #include "SlateOptMacros.h"
 #include "Widgets/Text/STextBlock.h"
 #include "Widgets/Input/SButton.h"
