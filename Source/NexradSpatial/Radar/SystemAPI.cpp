@@ -64,12 +64,14 @@ inline bool makePath(const std::string& path){
     case ENOENT:
         // parent didn't exist, try to create it
         {
-            int pos = path.find_last_of('/');
-            if (pos == std::string::npos)
+            size_t pos = path.find_last_of('/');
 #if defined(_WIN32)
-                pos = path.find_last_of('\\');
-            if (pos == std::string::npos)
+            size_t pos_win = path.find_last_of('\\');
+            if (pos_win != std::string::npos && (pos == std::string::npos || pos_win > pos)) {
+                pos = pos_win;
+            }
 #endif
+            if (pos == std::string::npos)
                 return false;
             if (!makePath( path.substr(0, pos) ))
                 return false;

@@ -15,11 +15,11 @@ AWarningManager::AWarningManager()
 {
 	PrimaryActorTick.bCanEverTick = true;
 	
-	tornadoGroup = GISGroup(3000000, 40, 1.0f, 0.0f, 0.0f); // Red, 3000km view distance, 40m thick line
-	severeGroup = GISGroup(3000000, 40, 1.0f, 0.8f, 0.0f); // Yellow
-	flashFloodGroup = GISGroup(3000000, 40, 0.0f, 1.0f, 0.0f); // Green
-	specialMarineGroup = GISGroup(3000000, 40, 0.0f, 0.5f, 1.0f); // Blue
-	otherGroup = GISGroup(3000000, 40, 0.5f, 0.5f, 0.5f); // Gray
+	tornadoGroup = GISGroup(3000000, 8, 1.0f, 0.0f, 0.0f); // Red, 3000km view distance, 8m thick line
+	severeGroup = GISGroup(3000000, 8, 1.0f, 0.8f, 0.0f); // Yellow
+	flashFloodGroup = GISGroup(3000000, 8, 0.0f, 1.0f, 0.0f); // Green
+	specialMarineGroup = GISGroup(3000000, 8, 0.0f, 0.5f, 1.0f); // Blue
+	otherGroup = GISGroup(3000000, 8, 0.5f, 0.5f, 0.5f); // Gray
 }
 
 AWarningManager::~AWarningManager()

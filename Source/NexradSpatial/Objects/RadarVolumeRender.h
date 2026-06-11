@@ -83,7 +83,7 @@ public:
 	//FByteBulkData* valueIndexImageData;
 	static ARadarVolumeRender* instance;
 	RadarCollection* radarCollection = NULL;
-	RadarData* radarData;
+	RadarData* radarData = NULL;
 	std::string lastSiteId = "";
 	
 	//GlobalState* globalState = NULL;

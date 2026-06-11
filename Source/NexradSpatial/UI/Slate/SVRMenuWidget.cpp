@@ -11,6 +11,8 @@
 #include "Widgets/Layout/SScrollBox.h"
 #include "Widgets/Layout/SSeparator.h"
 #include "Widgets/SBoxPanel.h"
+#include "Widgets/Images/SImage.h"
+#include "Engine/Texture2D.h"
 #include "../../Objects/RadarGameStateBase.h"
 #include "../../Objects/RadarViewPawn.h"
 #include "../../Application/GlobalState.h"
@@ -72,10 +74,33 @@ void SVRMenuWidget::Construct(const FArguments& InArgs)
 				.BorderBackgroundColor(FLinearColor(0.08f, 0.08f, 0.15f, 1.0f))
 				.Padding(FMargin(16, 10))
 				[
-					SNew(STextBlock)
-					.Text(FText::FromString("⛈  NexradSpatial VR"))
-					.Font(HeaderFont())
-					.ColorAndOpacity(AccentColor())
+					SNew(SHorizontalBox)
+					+ SHorizontalBox::Slot()
+					.AutoWidth()
+					.Padding(0, 0, 10, 0)
+					[
+						SNew(SImage)
+						.Image_Lambda([]() -> const FSlateBrush* {
+							static FSlateBrush* LogoBrush = nullptr;
+							if (!LogoBrush) {
+								LogoBrush = new FSlateBrush();
+								UTexture2D* LogoTex = LoadObject<UTexture2D>(nullptr, TEXT("/Game/Textures/NEXRADSpatial_logo.NEXRADSpatial_logo"));
+								if (LogoTex) {
+									LogoBrush->SetResourceObject(LogoTex);
+									LogoBrush->ImageSize = FVector2D(32.f, 32.f);
+								}
+							}
+							return LogoBrush;
+						})
+					]
+					+ SHorizontalBox::Slot()
+					.VAlign(VAlign_Center)
+					[
+						SNew(STextBlock)
+						.Text(FText::FromString("NexradSpatial VR"))
+						.Font(HeaderFont())
+						.ColorAndOpacity(AccentColor())
+					]
 				]
 			]
 
@@ -889,6 +914,8 @@ TSharedRef<SWidget> SVRMenuWidget::BuildControlsTab()
 				"- Right Trigger: Click / UI Interact\n"
 				"- Right Grip: Grip/Grab Map\n"
 				"- Right Thumbstick (Left/Right): Rotate Camera Left/Right\n"
+				"- Right Thumbstick (Press): Toggle Inspector Tool\n"
+				"- A Button (Press): Remove Last Marker\n"
 				"- A Button (Hold 1.0s): Spatial Interrogator (Extracts GPS + Street)\n"
 			))
 		];

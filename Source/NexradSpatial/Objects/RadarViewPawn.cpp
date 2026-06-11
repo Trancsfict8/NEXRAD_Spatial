@@ -21,6 +21,7 @@
 #include "../UI/ImGuiController.h"
 #include "../UI/Slate/SlateUI.h"
 #include "../UI/Slate/SVRMenuWidget.h"
+#include "../EngineHelpers/StringUtils.h"
 #include "Engine/Engine.h"
 #include "MotionControllerComponent.h"
 #include "XRDeviceVisualizationComponent.h"
@@ -283,7 +284,7 @@ void ARadarViewPawn::Tick(float deltaTime)
 			if (GetWorld()->LineTraceSingleByChannel(hitResult, start, end, ECC_Camera, queryParams)) {
 				AActor* hitActor = hitResult.GetActor();
 				if (hitActor) {
-					currentHoveredMarker = dynamic_cast<ALocationMarker*>(hitActor);
+					currentHoveredMarker = Cast<ALocationMarker>(hitActor);
 				}
 			}
 		}
@@ -503,6 +504,15 @@ void ARadarViewPawn::Tick(float deltaTime)
 
 	}
 
+		if (globalState->downloadSiteId != lastSiteId) {
+			lastSiteId = globalState->downloadSiteId;
+			for (ALocationMarker* marker : spawnedMarkers) {
+				if (marker) marker->Destroy();
+			}
+			spawnedMarkers.Empty();
+			lastHoveredMarker = nullptr;
+		}
+
 
 		bool shouldEnableTAA = globalState->temporalAntiAliasing;
 		
@@ -513,6 +523,28 @@ void ARadarViewPawn::Tick(float deltaTime)
 		location += camera->GetForwardVector() * forwardMovement * deltaTime * moveSpeed;
 		location += camera->GetRightVector() * sidewaysMovement * deltaTime * moveSpeed;
 		location.Z += totalVertical * deltaTime * moveSpeed;
+		
+		// Only apply bounds check if radar data has been loaded (globe is properly configured).
+		// Before any data loads, the globe hasn't had SetTopCoordinates called, so
+		// GetLocationScaled returns invalid values that always appear out-of-bounds,
+		// which blocks all movement.
+		if (globalState->globe != NULL && mainVolumeRender != NULL && mainVolumeRender->radarData != NULL && mainVolumeRender->radarData->radiusBufferCount > 0) {
+			SimpleVector3<double> loc(location.X, location.Y, location.Z);
+			SimpleVector3<double> spherical = globalState->globe->GetLocationScaled(loc);
+			double alt = spherical.x;
+			double lon = FMath::RadiansToDegrees(spherical.y);
+			double lat = FMath::RadiansToDegrees(spherical.z);
+			
+			bool outOfBounds = false;
+			if (lat < 15.0 || lat > 60.0 || lon < -140.0 || lon > -50.0) outOfBounds = true;
+			if (alt < -10668.0) outOfBounds = true;
+			
+			if (outOfBounds) {
+				location.X = GetActorLocation().X;
+				location.Y = GetActorLocation().Y;
+				location.Z = GetActorLocation().Z;
+			}
+		}
 		SetActorLocation(location);
 		
 		if(forwardMovement != 0 || sidewaysMovement != 0 || totalVertical != 0){
@@ -615,9 +647,15 @@ void ARadarViewPawn::AutoLocateAndEnableRadar() {
 						}
 						
 						if (bestSite != nullptr) {
-							GS->globalState.downloadSiteId = std::string(bestSite);
+							std::string nearestSite(bestSite);
+							GS->globalState.downloadSiteId = nearestSite;
 							GS->globalState.downloadData = true;
 							GS->globalState.pollData = true;
+							
+							// Emit LoadDirectory immediately so the radar collection knows where to look,
+							// ensuring data loads even if the downloader takes time to spin up.
+							std::string outputPath = StringUtils::GetUserPath("Data/Realtime/" + nearestSite + "/");
+							GS->globalState.EmitEvent("LoadDirectory", outputPath, NULL);
 						}
 					}
 				}
@@ -676,11 +714,23 @@ void ARadarViewPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 	PlayerInputComponent->BindAction("SpatialInterrogator", IE_Pressed, this, &ARadarViewPawn::InterrogatorPressed);
 	PlayerInputComponent->BindAction("SpatialInterrogator", IE_Released, this, &ARadarViewPawn::InterrogatorReleased);
 
-	PlayerInputComponent->BindKey(EKeys::Gamepad_FaceButton_Bottom, IE_Pressed, this, &ARadarViewPawn::RemoveLastMarker);
+	PlayerInputComponent->BindAction("ToggleInspector", IE_Pressed, this, &ARadarViewPawn::ToggleInspector);
+	PlayerInputComponent->BindKey(EKeys::Gamepad_RightThumbstick, IE_Pressed, this, &ARadarViewPawn::ToggleInspector);
+}
+
+void ARadarViewPawn::ToggleInspector() {
+	if (ARadarGameStateBase* GS = GetWorld()->GetGameState<ARadarGameStateBase>()) {
+		GlobalState* globalState = &GS->globalState;
+		globalState->bInspectorEnabled = !globalState->bInspectorEnabled;
+	}
 }
 
 void ARadarViewPawn::RemoveLastMarker() {
-	if (spawnedMarkers.Num() > 0) {
+	if (lastHoveredMarker) {
+		spawnedMarkers.Remove(lastHoveredMarker);
+		lastHoveredMarker->Destroy();
+		lastHoveredMarker = nullptr;
+	} else if (spawnedMarkers.Num() > 0) {
 		ALocationMarker* marker = spawnedMarkers.Pop();
 		if (marker) {
 			marker->Destroy();
@@ -822,6 +872,9 @@ void ARadarViewPawn::InterrogatorPressed() {
 }
 
 void ARadarViewPawn::InterrogatorReleased() { 
+	if (interrogatorHoldTimer >= 0.0f && interrogatorHoldTimer < 1.0f) {
+		RemoveLastMarker();
+	}
 	bIsInterrogatorHeld = false; 
 	interrogatorHoldTimer = 0.0f; 
 	UE_LOG(LogTemp, Warning, TEXT("[DEBUG] Spatial Interrogator RELEASED")); 
@@ -984,7 +1037,7 @@ void ARadarViewPawn::InterrogateSpatialTriggered() {
 	Request->SetVerb(TEXT("POST"));
 	Request->SetHeader(TEXT("Content-Type"), TEXT("application/x-www-form-urlencoded"));
 
-	FString Query = FString::Printf(TEXT("[out:json];way(around:50,%f,%f)[highway];node(w)->.intersectionNodes;way(bn.intersectionNodes)[highway];out tags;"), lat, lon);
+	FString Query = FString::Printf(TEXT("[out:json];way(around:150,%f,%f)[highway~\"^(primary|secondary|tertiary|trunk|motorway|residential)$\"][name];node(w)->.intersectionNodes;way(bn.intersectionNodes)[highway~\"^(primary|secondary|tertiary|trunk|motorway|residential)$\"][name];out tags;"), lat, lon);
 	Request->SetContentAsString(Query);
 	Request->ProcessRequest();
 		

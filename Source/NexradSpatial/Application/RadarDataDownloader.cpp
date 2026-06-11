@@ -45,6 +45,7 @@ public:
 		TSharedRef<IHttpRequest, ESPMode::ThreadSafe> httpRequest = FHttpModule::Get().CreateRequest();
 		httpRequest->SetURL(StringUtils::STDStringToFString(url));
 		httpRequest->SetVerb("GET");
+		httpRequest->SetHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 OpenStormVR/1.0 (contact: info@example.com)");
 		httpRequest->SetTimeout(timeout);
 		if(firstByte >= 0){
 			if(lastByte >= 0){
@@ -402,6 +403,10 @@ void ARadarDataDownloader::Tick(float DeltaTime)
 				// cancel and restart downloader
 				downloaderTask->Cancel();
 				fprintf(stderr, "Canceled downloader\n");
+				
+				// Immediately emit LoadDirectory so the visual data loads from disk without waiting for the canceled thread to exit
+				std::string newOutputPath = StringUtils::GetUserPath("Data/Realtime/" + downloaderTask->siteId + "/");
+				globalState->EmitEvent("LoadDirectory", newOutputPath, NULL);
 			}
 			// limit to 10 or more seconds between requests
 			downloaderTask->pollInterval = std::max(10.0f, globalState->downloadPollInterval);

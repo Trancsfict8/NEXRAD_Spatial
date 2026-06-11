@@ -64,6 +64,7 @@ public:
 	SimpleVector3<float> currentLatLon = {0,0,0};
 	
 	class ALocationMarker* lastHoveredMarker = nullptr;
+	std::string lastSiteId = "";
 	
 	std::vector<uint64_t> callbackIds = {};
 
@@ -82,6 +83,7 @@ public:
 	void VRScrollRotateX(float value);
 	void VRScrollRotateY(float value);
 	void ToggleVRMenu();
+	void ToggleInspector();
 	
 	bool isButtonXHeld = false;
 	void ButtonXPressed() { isButtonXHeld = true; }
