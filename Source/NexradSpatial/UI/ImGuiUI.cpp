@@ -535,6 +535,7 @@ void ImGuiUI::MainUI()
 				ImGui::PopItemWidth();
 				SetCustomInputTooltip("How many volumes per second to play through");
 				CustomFloatInput("Time Animation Speed", 1, 20, &globalState.animateSpeed, &globalState.defaults->animateSpeed);
+				CustomFloatInput("Hold on Last Frame (s)", 0, 5, &globalState.animateHoldEnd, &globalState.defaults->animateHoldEnd);
 				ImGui::Checkbox("Cuttoff", &globalState.animateCutoff);
 				CustomTooltipForPrevious("Will animate between a cutoff of zero and the value currently set for cutoff\nThe cutoff must be more than zero for this to work");
 				SetCustomInputTooltip("How fast to animate the cutoff value");

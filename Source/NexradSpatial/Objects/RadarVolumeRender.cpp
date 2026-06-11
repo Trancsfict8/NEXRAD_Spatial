@@ -509,6 +509,7 @@ void ARadarVolumeRender::Tick(float DeltaTime)
 	GlobalState* globalState = &GetWorld()->GetGameState<ARadarGameStateBase>()->globalState;
 	radarCollection->automaticallyAdvance = globalState->animate;
 	radarCollection->autoAdvanceInterval = 1.0f / globalState->animateSpeed;
+	radarCollection->holdOnLastFrameInterval = globalState->animateHoldEnd;
 	radarCollection->poll = globalState->pollData;
 	switch(globalState->animateLoopMode){
 		case GlobalState::LOOP_MODE_DEFAULT:

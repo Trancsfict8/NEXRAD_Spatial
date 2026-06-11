@@ -787,6 +787,14 @@ TSharedRef<SWidget> SVRMenuWidget::BuildSettingsTab()
 
 		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
 		[
+			MakeSlider(TEXT("Hold on Last Frame"), 
+				[this]() { return GetGlobalState() ? GetGlobalState()->animateHoldEnd / 5.0f : 0.0f; },
+				[this](float v) { if (GetGlobalState()) GetGlobalState()->animateHoldEnd = v * 5.0f; }, 
+				TEXT("Hold on Last Frame: {0}s"))
+		]
+
+		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
+		[
 			MakeSlider(TEXT("Cutoff Animation Speed"), 
 				[this]() { return GetGlobalState() ? (GetGlobalState()->animateCutoffSpeed - 0.1f) / 1.9f : 0.0f; },
 				[this](float v) { if (GetGlobalState()) GetGlobalState()->animateCutoffSpeed = 0.1f + (v * 1.9f); }, 

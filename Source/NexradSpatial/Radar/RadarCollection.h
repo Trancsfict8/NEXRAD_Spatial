@@ -46,6 +46,7 @@ public:
 	
 	// time between automatic advances
 	float autoAdvanceInterval = 1;
+	float holdOnLastFrameInterval = 1.0f;
 	
 	// what should be done when the end is reached while auto advancing
 	AnimationEndOptions autoAdvanceEndOption = AnimationEndJumpCache;

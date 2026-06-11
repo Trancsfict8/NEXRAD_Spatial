@@ -152,6 +152,7 @@ void ASettingsSaver::LoadSettings() {
 		LOAD_MACRO_FLOAT(rotateSpeed);
 		// --Animation--
 		LOAD_MACRO_FLOAT(animateSpeed);
+		LOAD_MACRO_FLOAT(animateHoldEnd);
 		LOAD_MACRO_FLOAT(animateLoopMode);
 		LOAD_MACRO_FLOAT(animateCutoffSpeed);
 		// --Data--
@@ -247,6 +248,7 @@ void ASettingsSaver::SaveSettings() {
 		SAVE_MACRO_FLOAT(rotateSpeed);
 		// --Animation--
 		SAVE_MACRO_FLOAT(animateSpeed);
+		SAVE_MACRO_FLOAT(animateHoldEnd);
 		SAVE_MACRO_FLOAT(animateLoopMode);
 		SAVE_MACRO_FLOAT(animateCutoffSpeed);
 		// --Data--
@@ -383,6 +385,7 @@ void ASettingsSaver::ResetAllSettings() {
 		RESET_MACRO(animateLoopMode);
 		RESET_MACRO(animateCutoff);
 		RESET_MACRO(animateSpeed);
+		RESET_MACRO(animateHoldEnd);
 		RESET_MACRO(animateCutoffSpeed);
 		// --Data--
 		RESET_MACRO(pollData);

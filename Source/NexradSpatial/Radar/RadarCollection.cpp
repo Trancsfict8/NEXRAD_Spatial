@@ -511,7 +511,11 @@ void RadarCollection::EventLoop() {
 				Move(lastMoveDirection);
 			}
 			// set next animate time taking into account how late this frame is
-			nextAdvanceTime = now + std::max(0.0, autoAdvanceInterval - (now - nextAdvanceTime));
+			if (IsEndReached(1)) {
+				nextAdvanceTime = now + std::max(0.0, holdOnLastFrameInterval - (now - nextAdvanceTime));
+			} else {
+				nextAdvanceTime = now + std::max(0.0, autoAdvanceInterval - (now - nextAdvanceTime));
+			}
 		}
 	}else{
 		nextAdvanceTime = 0;
@@ -955,7 +959,11 @@ void RadarCollection::Emit(RadarDataHolder* holder) {
 	event.data = holder->radarData;
 	event.minTimeTillNext = 0.2;
 	if(automaticallyAdvance){
-		event.minTimeTillNext = autoAdvanceInterval;
+		if (IsEndReached(1)) {
+			event.minTimeTillNext = holdOnLastFrameInterval;
+		} else {
+			event.minTimeTillNext = autoAdvanceInterval;
+		}
 	}
 	for(auto listener : listeners){
 		listener(event);

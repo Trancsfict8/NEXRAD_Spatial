@@ -184,8 +184,8 @@ void ARadarViewPawn::BeginPlay()
 		dynamicLaser->SetStaticMesh(cylMesh);
 	}
 	dynamicLaser->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	dynamicLaser->SetRelativeScale3D(FVector(0.005f, 0.005f, 5.0f));
-	dynamicLaser->SetRelativeLocation(FVector(250.0f, 0.0f, 0.0f));
+	dynamicLaser->SetRelativeScale3D(FVector(0.005f, 0.005f, 2.5f));
+	dynamicLaser->SetRelativeLocation(FVector(125.0f, 0.0f, 0.0f));
 	dynamicLaser->SetRelativeRotation(FRotator(90.0f, 0.0f, 0.0f));
 	
 	// Attach the raymarching proxy mesh closely to the camera so it follows the user's head
