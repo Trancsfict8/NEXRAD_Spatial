@@ -227,7 +227,12 @@ void ARadarViewPawn::BeginPlay()
 	}
 	
 	GetWorld()->SpawnActor<AWarningManager>(AWarningManager::StaticClass());
-	AutoLocateAndEnableRadar();
+	
+	// Do not auto-locate or teleport if we are in the Disclaimer level
+	if (!GetWorld()->GetMapName().Contains(TEXT("L_DisclaimerStart")))
+	{
+		AutoLocateAndEnableRadar();
+	}
 }
 
 void ARadarViewPawn::EndPlay(const EEndPlayReason::Type endPlayReason) {
@@ -722,6 +727,9 @@ void ARadarViewPawn::ToggleInspector() {
 	if (ARadarGameStateBase* GS = GetWorld()->GetGameState<ARadarGameStateBase>()) {
 		GlobalState* globalState = &GS->globalState;
 		globalState->bInspectorEnabled = !globalState->bInspectorEnabled;
+		if (globalState->bInspectorEnabled) {
+			inspectorDistance = 250.0f; // Default to end of the laser pointer
+		}
 	}
 }
 

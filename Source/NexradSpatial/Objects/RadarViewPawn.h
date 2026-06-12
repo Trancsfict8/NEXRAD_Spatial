@@ -103,7 +103,7 @@ public:
 	UPROPERTY(VisibleAnywhere)
 	class UStaticMeshComponent* inspectorHaloMesh = NULL;
 	
-	float inspectorDistance = 500.0f; // 5 km default distance
+	float inspectorDistance = 250.0f; // 2.5m default distance (end of laser pointer)
 	
 	void BuildVRAvatar();
 
