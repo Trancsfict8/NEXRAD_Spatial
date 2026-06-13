@@ -7,10 +7,12 @@
 #include "../UI/Native.h"
 #include "RadarGameStateBase.h"
 #include "../EngineHelpers/MaterialRenderTarget.h"
+#include "../Radar/RadarColorTableSubsystem.h"
 
 #include "../EngineHelpers/MaterialRenderTarget.h"
 #include "Components/TextRenderComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Engine/GameInstance.h"
 #include "imgui.h"
 
 //#define VERBOSE 1
@@ -295,6 +297,21 @@ void ARadarVolumeRender::BeginPlay()
 	}));
 	
 	//RandomizeTexture();
+	
+	// Cache custom color table data from the subsystem (safe - GameInstance exists at BeginPlay)
+	if (UGameInstance* GI = GetGameInstance())
+	{
+		if (URadarColorTableSubsystem* ColorSubsystem = GI->GetSubsystem<URadarColorTableSubsystem>())
+		{
+			// Try reflectivity first
+			ColorSubsystem->GetRadarColorTable(true, TEXT(""), cachedCustomColorData, cachedCustomMin, cachedCustomMax, bHasCustomColorTable);
+			if (bHasCustomColorTable)
+			{
+				bCustomTableIsReflectivity = true;
+				UE_LOG(LogTemp, Warning, TEXT("RadarVolumeRender: Cached custom REFLECTIVITY color table. Min: %f, Max: %f, DataSize: %d"), cachedCustomMin, cachedCustomMax, cachedCustomColorData.Num());
+			}
+		}
+	}
 }
 
 void ARadarVolumeRender::HandleRadarDataEvent(RadarCollection::RadarUpdateEvent event){
@@ -599,24 +616,36 @@ void ARadarVolumeRender::Tick(float DeltaTime)
 				volumeMaterialRenderTarget->Update();
 			}
 		}
-		//return;
 		//*
 		RadarColorIndex::Params colorParams = {};
 		colorParams.fromRadarData(radarData);
-		//radarColorResult = RadarColorIndex::reflectivityColors(colorParams, &radarColorResult);
-		//radarColorResult = RadarColorIndex::velocityColors(colorParams, &radarColorResult);
-		radarColorResult = radarColor->GenerateColorIndex(colorParams, &radarColorResult);
+
+		if (bHasCustomColorTable && cachedCustomColorData.Num() == 16384 * 4)
+		{
+			bool bIsReflectivity = (radarData->stats.volumeType == RadarData::VOLUME_REFLECTIVITY);
+			if (bIsReflectivity && bCustomTableIsReflectivity)
+			{
+				radarColorResult = radarColor->GenerateColorIndex(colorParams, &radarColorResult);
+				radarColorResult.lower = cachedCustomMin;
+				radarColorResult.upper = cachedCustomMax;
+				FMemory::Memcpy(radarColorResult.data, cachedCustomColorData.GetData(), cachedCustomColorData.Num() * sizeof(float));
+			}
+			else
+			{
+				radarColorResult = radarColor->GenerateColorIndex(colorParams, &radarColorResult);
+			}
+		}
+		else
+		{
+			radarColorResult = radarColor->GenerateColorIndex(colorParams, &radarColorResult);
+		}
+
 		float cutoff = globalState->cutoff;
 		if (globalState->animateCutoff) {
 			cutoff = (sin(fmod(now, 1 / globalState->animateCutoffSpeed) * globalState->animateCutoffSpeed * PI2F) + 1) / 2 * cutoff;
-			//cutoff = abs(fmod(now, globalState->animateCutoffTime) / globalState->animateCutoffTime * -2 + 1) * cutoff;
 		}
 		radarColor->ModifyOpacity(globalState->opacityMultiplier, cutoff, &radarColorResult);
-		//float* rawValueIndexImageData = (float*)valueIndexImageData->Lock(LOCK_READ_WRITE);
-		//memcpy(rawValueIndexImageData, valueIndex.data, 16384);
-		//memcpy(rawValueIndexImageData, radarColorResult.data, radarColorResult.byteSize);
-		//valueIndexImageData->Unlock();
-		//valueIndexTexture->UpdateResource();
+		
 		UpdateTexture(valueIndexTexture, (uint8_t*)radarColorResult.data, radarColorResult.byteSize, sizeof(float) * 4);
 
 		// set value bounds

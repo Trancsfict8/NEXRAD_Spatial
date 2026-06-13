@@ -92,6 +92,13 @@ public:
 	RadarColorIndex::Result radarColorResult = {};
 	RadarColorIndex::Result radarColorResultAlternate = {};
 	
+	// Cached custom color table data from RadarColorTableSubsystem
+	bool bHasCustomColorTable = false;
+	bool bCustomTableIsReflectivity = true;
+	TArray<float> cachedCustomColorData;
+	float cachedCustomMin = 0.0f;
+	float cachedCustomMax = 1.0f;
+	
 	// load data from RadarUpdateEvent into shader
 	void HandleRadarDataEvent(RadarCollection::RadarUpdateEvent event);
 	

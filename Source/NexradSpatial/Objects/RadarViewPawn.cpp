@@ -542,7 +542,7 @@ void ARadarViewPawn::Tick(float deltaTime)
 			
 			bool outOfBounds = false;
 			if (lat < 15.0 || lat > 60.0 || lon < -140.0 || lon > -50.0) outOfBounds = true;
-			if (alt < -10668.0) outOfBounds = true;
+			if (alt < -10000.0) outOfBounds = true; // Prevent player from moving too far under the map
 			
 			if (outOfBounds) {
 				location.X = GetActorLocation().X;
@@ -735,6 +735,9 @@ void ARadarViewPawn::ToggleInspector() {
 
 void ARadarViewPawn::RemoveLastMarker() {
 	if (lastHoveredMarker) {
+		if (lastHoveredMarker->markerType == ALocationMarker::MarkerTypeRadarSite) {
+			return; // Radar sites are strictly off limits for deletion
+		}
 		spawnedMarkers.Remove(lastHoveredMarker);
 		lastHoveredMarker->Destroy();
 		lastHoveredMarker = nullptr;
@@ -1027,7 +1030,7 @@ void ARadarViewPawn::InterrogateSpatialTriggered() {
 						ALocationMarker* marker = World->SpawnActor<ALocationMarker>(ALocationMarker::StaticClass());
 						if (marker) {
 							FVector Normal = (hitLocation - SphereCenter).GetSafeNormal();
-							marker->SetActorLocation(hitLocation + Normal * 10.0f); // Raise slightly above the globe
+							marker->SetActorLocation(hitLocation + Normal * 50.0f); // Raise significantly to clear high terrain
 							marker->latitude = lat;
 							marker->longitude = lon;
 							marker->SetText(TCHAR_TO_UTF8(*FinalAddress));

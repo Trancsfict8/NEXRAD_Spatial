@@ -70,7 +70,7 @@ void AGISPolyline::DisplayObject(GISObject* object, GISGroup* group){
 		int64_t previousIndex = std::max(currentPointIndex - 2, initialPointIndex);
 		SimpleVector3<float> previousPoint = globe.GetPointScaledDegrees(object->geometry[previousIndex],object->geometry[previousIndex + 1],0);
 		//float elevation = ElevationData::GetDataAtPointRadians(object->geometry[currentPointIndex] / 180.0f * PI, object->geometry[currentPointIndex + 1] / 180.0f * PI);
-		SimpleVector3<float> point = globe.GetPointScaledDegrees(object->geometry[currentPointIndex], object->geometry[currentPointIndex + 1], 1000 /*+ elevation*/);
+		SimpleVector3<float> point = globe.GetPointScaledDegrees(object->geometry[currentPointIndex], object->geometry[currentPointIndex + 1], 250 /*+ elevation*/);
 		currentPointIndex += 2;
 		
 		SimpleVector3<float> direction = point;
