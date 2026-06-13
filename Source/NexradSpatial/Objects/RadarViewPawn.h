@@ -89,9 +89,23 @@ public:
 	void ButtonXPressed() { isButtonXHeld = true; }
 	void ButtonXReleased() { isButtonXHeld = false; }
 	
+	bool bIsDrawingStroke = false;
+	bool bIsErasing = false;
+	bool bIsButtonBHeld = false;
+	bool bHasClearedLines = false;
+	float buttonBPressTime = 0.0f;
+	FVector lastDrawPosition;
+	void ButtonBPressed();
+	void ButtonBReleased();
+	void DrawLineSegment(FVector start, FVector end);
+	void EraseLineSegment();
+	void ClearAllLines();
+	
 	// Inspector Tool
 	UPROPERTY(VisibleAnywhere)
 	class UStaticMeshComponent* inspectorMesh = NULL;
+	UPROPERTY(VisibleAnywhere)
+	class UStaticMeshComponent* drawingIndicatorMesh = NULL;
 	UPROPERTY(VisibleAnywhere)
 	class UTextRenderComponent* inspectorText = NULL;
 	UPROPERTY(VisibleAnywhere)

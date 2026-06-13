@@ -785,6 +785,40 @@ TSharedRef<SWidget> SVRMenuWidget::BuildSettingsTab()
 
 		+ SVerticalBox::Slot().AutoHeight()[ MakeLabel(TEXT("Controls & UI")) ]
 
+		+ SVerticalBox::Slot().AutoHeight()[ MakeLabel(TEXT("Drawing Tool")) ]
+
+		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
+		[
+			MakeSlider(TEXT("Line Width"), 
+				[this]() { return GetGlobalState() ? (GetGlobalState()->drawingLineWidth - 1.0f) / 49.0f : 0.0f; },
+				[this](float v) { if (GetGlobalState()) GetGlobalState()->drawingLineWidth = 1.0f + (v * 49.0f); }, 
+				TEXT("Line Width: {0}"))
+		]
+		
+		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
+		[
+			MakeSlider(TEXT("Color Red"), 
+				[this]() { return GetGlobalState() ? GetGlobalState()->drawingColorR / 255.0f : 0.0f; },
+				[this](float v) { if (GetGlobalState()) GetGlobalState()->drawingColorR = v * 255.0f; }, 
+				TEXT("Color Red: {0}"))
+		]
+		
+		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
+		[
+			MakeSlider(TEXT("Color Green"), 
+				[this]() { return GetGlobalState() ? GetGlobalState()->drawingColorG / 255.0f : 0.0f; },
+				[this](float v) { if (GetGlobalState()) GetGlobalState()->drawingColorG = v * 255.0f; }, 
+				TEXT("Color Green: {0}"))
+		]
+		
+		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
+		[
+			MakeSlider(TEXT("Color Blue"), 
+				[this]() { return GetGlobalState() ? GetGlobalState()->drawingColorB / 255.0f : 0.0f; },
+				[this](float v) { if (GetGlobalState()) GetGlobalState()->drawingColorB = v * 255.0f; }, 
+				TEXT("Color Blue: {0}"))
+		]
+
 		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
 		[
 			MakeSlider(TEXT("Movement Speed"), 
@@ -911,12 +945,15 @@ TSharedRef<SWidget> SVRMenuWidget::BuildControlsTab()
 				"- Y Button: Toggle VR Wrist Menu\n"
 				"- X Button (Hold): Adjust Inspector Distance (Right Thumbstick Y-Axis)\n\n"
 				"Right Controller:\n"
-				"- Right Trigger: Click / UI Interact\n"
+				"- Right Trigger: Click / UI Interact / Draw (if enabled)\n"
 				"- Right Grip: Grip/Grab Map\n"
 				"- Right Thumbstick (Left/Right): Rotate Camera Left/Right\n"
 				"- Right Thumbstick (Press): Toggle Inspector Tool\n"
 				"- A Button (Press): Remove Last Marker\n"
 				"- A Button (Hold 1.0s): Spatial Interrogator (Extracts GPS + Street)\n"
+				"- B Button (Press): Toggle Drawing Tool\n"
+				"- B Button (Hold) + Trigger: Erase Drawn Line\n"
+				"- B Button (Hold 3.0s): Clear All Lines\n"
 			))
 		];
 }

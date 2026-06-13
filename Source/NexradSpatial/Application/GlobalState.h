@@ -63,6 +63,7 @@ public:
 	bool audioControlledOpacity = false;
 	bool audioControlledCutoff = false;
 	bool bInspectorEnabled = false; // toggles the VR inspector tool
+	bool enableDrawingTool = false; // toggles 3d line drawing tool
 	bool useImperialUnits = false; // toggles metric/imperial units
 	
 	float maxFPS = 60.0f; // maximum frames per second
@@ -96,6 +97,12 @@ public:
 	float siteMarkerColorG = 255; // green component of site marker color
 	float siteMarkerColorB = 255; // blue component of site marker color
 	float siteMarkerColorA = 255; // alpha component of site marker color
+	
+	float drawingLineWidth = 10.0f;
+	float drawingColorR = 255.0f;
+	float drawingColorG = 0.0f;
+	float drawingColorB = 0.0f;
+	float drawingColorA = 255.0f;
 	
 	int volumeType = 1; // type of radar product RadarData::VolumeType, defaults to 1 which is reflectivity
 	

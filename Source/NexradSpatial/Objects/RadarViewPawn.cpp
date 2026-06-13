@@ -189,6 +189,21 @@ void ARadarViewPawn::BeginPlay()
 	dynamicLaser->SetRelativeLocation(FVector(125.0f, 0.0f, 0.0f));
 	dynamicLaser->SetRelativeRotation(FRotator(90.0f, 0.0f, 0.0f));
 	
+	drawingIndicatorMesh = NewObject<UStaticMeshComponent>(this, TEXT("DrawingIndicatorMesh"));
+	drawingIndicatorMesh->SetupAttachment(widgetInteraction);
+	drawingIndicatorMesh->RegisterComponent();
+	UStaticMesh* coneMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cone.Cone"));
+	if (coneMesh) {
+		drawingIndicatorMesh->SetStaticMesh(coneMesh);
+	}
+	drawingIndicatorMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	drawingIndicatorMesh->SetRelativeScale3D(FVector(0.05f, 0.05f, 0.1f));
+	drawingIndicatorMesh->SetRelativeLocation(FVector(250.0f, 0.0f, 0.0f));
+	drawingIndicatorMesh->SetRelativeRotation(FRotator(-90.0f, 0.0f, 0.0f));
+	UMaterial* baseMat = LoadObject<UMaterial>(nullptr, TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial"));
+	UMaterialInstanceDynamic* dynMatIndicator = UMaterialInstanceDynamic::Create(baseMat, this);
+	if (dynMatIndicator) drawingIndicatorMesh->SetMaterial(0, dynMatIndicator);
+	
 	// Attach the raymarching proxy mesh closely to the camera so it follows the user's head
 	// in room-scale VR. A 50cm box (0.5 scale) prevents near-clip culling but ensures the ray
 	// origin starts right at the eyes.
@@ -279,7 +294,7 @@ void ARadarViewPawn::Tick(float deltaTime)
 		
 		ALocationMarker* currentHoveredMarker = nullptr;
 		
-		if (!widgetInteraction->IsOverInteractableWidget()) {
+		if (!widgetInteraction->IsOverInteractableWidget() && !globalState->enableDrawingTool) {
 			FHitResult hitResult;
 			FVector start = widgetInteraction->GetComponentLocation();
 			FVector end = start + (widgetInteraction->GetForwardVector() * 100000.0f);
@@ -313,6 +328,46 @@ void ARadarViewPawn::Tick(float deltaTime)
 		} else if (clickAxis < 0.3f && bWasClicked) {
 			bWasClicked = false;
 			widgetInteraction->ReleasePointerKey(EKeys::LeftMouseButton);
+		}
+		
+		if (clickAxis > 0.5f) {
+			buttonBPressTime = GetWorld()->GetRealTimeSeconds();
+		}
+		
+		if (bIsButtonBHeld && !bHasClearedLines && (GetWorld()->GetRealTimeSeconds() - buttonBPressTime > 3.0f)) {
+			bHasClearedLines = true;
+			ClearAllLines();
+		}
+		
+		// Drawing Tool Logic
+		if (globalState->enableDrawingTool) {
+			drawingIndicatorMesh->SetVisibility(true);
+			UMaterialInstanceDynamic* dynMat = Cast<UMaterialInstanceDynamic>(drawingIndicatorMesh->GetMaterial(0));
+			if (dynMat) {
+				dynMat->SetVectorParameterValue("Color", FLinearColor(globalState->drawingColorR/255.f, globalState->drawingColorG/255.f, globalState->drawingColorB/255.f, 1.0f));
+			}
+			
+			if (clickAxis > 0.5f) {
+				if (bIsErasing) {
+					EraseLineSegment();
+				} else if (!widgetInteraction->IsOverInteractableWidget() && !widgetInteraction->IsOverHitTestVisibleWidget()) {
+					FVector currentPos = widgetInteraction->GetComponentLocation() + widgetInteraction->GetForwardVector() * inspectorDistance;
+					if (bIsDrawingStroke) {
+						if (FVector::DistSquared(lastDrawPosition, currentPos) > 4.0f) { // 2 units min distance
+							DrawLineSegment(lastDrawPosition, currentPos);
+							lastDrawPosition = currentPos;
+						}
+					} else {
+						bIsDrawingStroke = true;
+						lastDrawPosition = currentPos;
+					}
+				}
+			} else {
+				bIsDrawingStroke = false;
+			}
+		} else {
+			drawingIndicatorMesh->SetVisibility(false);
+			bIsDrawingStroke = false;
 		}
 		
 		// Inspector logic
@@ -721,6 +776,9 @@ void ARadarViewPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 
 	PlayerInputComponent->BindAction("ToggleInspector", IE_Pressed, this, &ARadarViewPawn::ToggleInspector);
 	PlayerInputComponent->BindKey(EKeys::Gamepad_RightThumbstick, IE_Pressed, this, &ARadarViewPawn::ToggleInspector);
+	
+	PlayerInputComponent->BindAction("DrawingToolButton", IE_Pressed, this, &ARadarViewPawn::ButtonBPressed);
+	PlayerInputComponent->BindAction("DrawingToolButton", IE_Released, this, &ARadarViewPawn::ButtonBReleased);
 }
 
 void ARadarViewPawn::ToggleInspector() {
@@ -891,6 +949,102 @@ void ARadarViewPawn::InterrogatorReleased() {
 	UE_LOG(LogTemp, Warning, TEXT("[DEBUG] Spatial Interrogator RELEASED")); 
 	fprintf(stdout, "[DEBUG] Spatial Interrogator RELEASED\n"); 
 	if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, TEXT("Spatial Interrogator RELEASED")); 
+}
+
+void ARadarViewPawn::ButtonBPressed() {
+	bIsButtonBHeld = true;
+	bHasClearedLines = false;
+	buttonBPressTime = GetWorld()->GetRealTimeSeconds();
+	
+	ARadarGameStateBase* GS = GetWorld()->GetGameState<ARadarGameStateBase>();
+	if (GS && GS->globalState.enableDrawingTool) {
+		bIsErasing = true;
+	}
+}
+
+void ARadarViewPawn::ButtonBReleased() {
+	bIsButtonBHeld = false;
+	bIsErasing = false;
+	
+	if (!bHasClearedLines && GetWorld()->GetRealTimeSeconds() - buttonBPressTime < 0.3f) {
+		ARadarGameStateBase* GS = GetWorld()->GetGameState<ARadarGameStateBase>();
+		if (GS) {
+			GS->globalState.enableDrawingTool = !GS->globalState.enableDrawingTool;
+			if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Cyan, GS->globalState.enableDrawingTool ? TEXT("Drawing Tool: ON") : TEXT("Drawing Tool: OFF")); 
+		}
+	}
+}
+
+#include "Components/CapsuleComponent.h"
+
+void ARadarViewPawn::DrawLineSegment(FVector start, FVector end) {
+	if (start == end) return;
+	
+	AActor* lineActor = GetWorld()->SpawnActor<AActor>();
+	lineActor->Tags.Add(FName("DrawnLine"));
+	
+	UCapsuleComponent* capsule = NewObject<UCapsuleComponent>(lineActor);
+	capsule->RegisterComponent();
+	lineActor->SetRootComponent(capsule);
+	
+	UStaticMeshComponent* mesh = NewObject<UStaticMeshComponent>(lineActor);
+	mesh->SetupAttachment(capsule);
+	mesh->RegisterComponent();
+	
+	UStaticMesh* cylMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
+	mesh->SetStaticMesh(cylMesh);
+	
+	FVector direction = end - start;
+	float length = direction.Size();
+	direction.Normalize();
+	
+	FVector center = start + direction * (length * 0.5f);
+	lineActor->SetActorLocation(center);
+	
+	FRotator rotation = FRotationMatrix::MakeFromZ(direction).Rotator();
+	lineActor->SetActorRotation(rotation);
+	
+	GlobalState* globalState = &GetWorld()->GetGameState<ARadarGameStateBase>()->globalState;
+	float width = globalState->drawingLineWidth;
+	
+	capsule->SetCapsuleSize(width * 1.5f, length * 0.5f + width * 1.5f);
+	capsule->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	capsule->SetCollisionResponseToAllChannels(ECR_Ignore);
+	capsule->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
+	
+	mesh->SetWorldScale3D(FVector(width / 100.0f, width / 100.0f, length / 100.0f));
+	
+	UMaterial* baseMat = LoadObject<UMaterial>(nullptr, TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial"));
+	UMaterialInstanceDynamic* dynMat = UMaterialInstanceDynamic::Create(baseMat, lineActor);
+	if (dynMat) {
+		dynMat->SetVectorParameterValue("Color", FLinearColor(globalState->drawingColorR/255.f, globalState->drawingColorG/255.f, globalState->drawingColorB/255.f, 1.0f));
+		mesh->SetMaterial(0, dynMat);
+	}
+}
+
+void ARadarViewPawn::EraseLineSegment() {
+	FVector start = widgetInteraction->GetComponentLocation();
+	FVector end = start + widgetInteraction->GetForwardVector() * 10000.0f;
+	
+	FCollisionQueryParams params;
+	params.AddIgnoredActor(this);
+	
+	FHitResult hit;
+	if (GetWorld()->LineTraceSingleByChannel(hit, start, end, ECC_Visibility, params)) {
+		AActor* hitActor = hit.GetActor();
+		if (hitActor && hitActor->ActorHasTag(FName("DrawnLine"))) {
+			hitActor->Destroy();
+		}
+	}
+}
+
+void ARadarViewPawn::ClearAllLines() {
+	TArray<AActor*> FoundActors;
+	UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName("DrawnLine"), FoundActors);
+	for (AActor* Actor : FoundActors) {
+		Actor->Destroy();
+	}
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("All Lines Cleared"));
 }
 
 void ARadarViewPawn::InterrogateSpatialTriggered() {

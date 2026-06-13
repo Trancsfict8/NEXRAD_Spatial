@@ -137,6 +137,7 @@ void ASettingsSaver::LoadSettings() {
 		LOAD_MACRO_FLOAT(cutoff);
 		LOAD_MACRO_FLOAT(opacityMultiplier);
 		LOAD_MACRO_FLOAT(verticalScale);
+		LOAD_MACRO_FLOAT(elevationExaggeration);
 		LOAD_MACRO_BOOL(spatialInterpolation);
 		LOAD_MACRO_BOOL(temporalInterpolation);
 		LOAD_MACRO_FLOAT(viewMode);
@@ -177,6 +178,12 @@ void ASettingsSaver::LoadSettings() {
 		LOAD_MACRO_FLOAT(siteMarkerColorG);
 		LOAD_MACRO_FLOAT(siteMarkerColorB);
 		LOAD_MACRO_FLOAT(siteMarkerColorA);
+		
+		LOAD_MACRO_FLOAT(drawingLineWidth);
+		LOAD_MACRO_FLOAT(drawingColorR);
+		LOAD_MACRO_FLOAT(drawingColorG);
+		LOAD_MACRO_FLOAT(drawingColorB);
+		LOAD_MACRO_FLOAT(drawingColorA);
 		// Settings
 		LOAD_MACRO_BOOL(useImperialUnits);
 		LOAD_MACRO_FLOAT(maxFPS);
@@ -233,6 +240,7 @@ void ASettingsSaver::SaveSettings() {
 			jsonObject->RemoveField(TEXT("opacityMultiplier"));
 		}
 		SAVE_MACRO_FLOAT(verticalScale);
+		SAVE_MACRO_FLOAT(elevationExaggeration);
 		SAVE_MACRO_BOOL(spatialInterpolation);
 		SAVE_MACRO_BOOL(temporalInterpolation);
 		SAVE_MACRO_FLOAT(viewMode);
@@ -273,6 +281,12 @@ void ASettingsSaver::SaveSettings() {
 		SAVE_MACRO_FLOAT(siteMarkerColorG);
 		SAVE_MACRO_FLOAT(siteMarkerColorB);
 		SAVE_MACRO_FLOAT(siteMarkerColorA);
+		
+		SAVE_MACRO_FLOAT(drawingLineWidth);
+		SAVE_MACRO_FLOAT(drawingColorR);
+		SAVE_MACRO_FLOAT(drawingColorG);
+		SAVE_MACRO_FLOAT(drawingColorB);
+		SAVE_MACRO_FLOAT(drawingColorA);
 		// Settings
 		SAVE_MACRO_BOOL(useImperialUnits);
 		SAVE_MACRO_FLOAT(maxFPS);
@@ -308,6 +322,7 @@ void ASettingsSaver::ResetBasicSettings() {
 		RESET_MACRO(cutoff);
 		RESET_MACRO(opacityMultiplier);
 		RESET_MACRO(verticalScale);
+		RESET_MACRO(elevationExaggeration);
 		RESET_MACRO(spatialInterpolation);
 		RESET_MACRO(temporalInterpolation);
 		RESET_MACRO(viewMode);
@@ -367,6 +382,7 @@ void ASettingsSaver::ResetAllSettings() {
 		RESET_MACRO(cutoff);
 		RESET_MACRO(opacityMultiplier);
 		RESET_MACRO(verticalScale);
+		RESET_MACRO(elevationExaggeration);
 		RESET_MACRO(spatialInterpolation);
 		RESET_MACRO(temporalInterpolation);
 		RESET_MACRO(viewMode);
@@ -410,6 +426,12 @@ void ASettingsSaver::ResetAllSettings() {
 		RESET_MACRO(siteMarkerColorG);
 		RESET_MACRO(siteMarkerColorB);
 		RESET_MACRO(siteMarkerColorA);
+		
+		RESET_MACRO(drawingLineWidth);
+		RESET_MACRO(drawingColorR);
+		RESET_MACRO(drawingColorG);
+		RESET_MACRO(drawingColorB);
+		RESET_MACRO(drawingColorA);
 		// Settings
 		RESET_MACRO(useImperialUnits);
 		RESET_MACRO(maxFPS);
