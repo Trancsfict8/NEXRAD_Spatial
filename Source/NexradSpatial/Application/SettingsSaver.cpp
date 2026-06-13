@@ -184,6 +184,8 @@ void ASettingsSaver::LoadSettings() {
 		LOAD_MACRO_FLOAT(drawingColorG);
 		LOAD_MACRO_FLOAT(drawingColorB);
 		LOAD_MACRO_FLOAT(drawingColorA);
+		
+		LOAD_MACRO_FLOAT(laserDistance);
 		// Settings
 		LOAD_MACRO_BOOL(useImperialUnits);
 		LOAD_MACRO_FLOAT(maxFPS);
@@ -287,6 +289,8 @@ void ASettingsSaver::SaveSettings() {
 		SAVE_MACRO_FLOAT(drawingColorG);
 		SAVE_MACRO_FLOAT(drawingColorB);
 		SAVE_MACRO_FLOAT(drawingColorA);
+		
+		SAVE_MACRO_FLOAT(laserDistance);
 		// Settings
 		SAVE_MACRO_BOOL(useImperialUnits);
 		SAVE_MACRO_FLOAT(maxFPS);
@@ -432,6 +436,8 @@ void ASettingsSaver::ResetAllSettings() {
 		RESET_MACRO(drawingColorG);
 		RESET_MACRO(drawingColorB);
 		RESET_MACRO(drawingColorA);
+		
+		RESET_MACRO(laserDistance);
 		// Settings
 		RESET_MACRO(useImperialUnits);
 		RESET_MACRO(maxFPS);

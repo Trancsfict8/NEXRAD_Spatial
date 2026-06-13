@@ -66,6 +66,8 @@ public:
 	bool enableDrawingTool = false; // toggles 3d line drawing tool
 	bool useImperialUnits = false; // toggles metric/imperial units
 	
+	float laserDistance = 150.0f; // length of the laser pointer and distance for tools
+	
 	float maxFPS = 60.0f; // maximum frames per second
 	float animateSpeed = 5.0f; // speed of animation
 	float animateHoldEnd = 1.0f; // time to hold on the last frame before looping

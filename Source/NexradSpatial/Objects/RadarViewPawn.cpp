@@ -177,7 +177,7 @@ void ARadarViewPawn::BeginPlay()
 	widgetInteraction->SetRelativeRotation(FRotator(-45.0f, 0.0f, 0.0f));
 
 	// Create physical laser pointer dynamically at runtime to avoid UE5 C++ constructor corruption
-	UStaticMeshComponent* dynamicLaser = NewObject<UStaticMeshComponent>(this, TEXT("DynamicLaserMesh"));
+	dynamicLaser = NewObject<UStaticMeshComponent>(this, TEXT("DynamicLaserMesh"));
 	dynamicLaser->SetupAttachment(widgetInteraction);
 	dynamicLaser->RegisterComponent();
 	UStaticMesh* cylMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
@@ -185,8 +185,8 @@ void ARadarViewPawn::BeginPlay()
 		dynamicLaser->SetStaticMesh(cylMesh);
 	}
 	dynamicLaser->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	dynamicLaser->SetRelativeScale3D(FVector(0.005f, 0.005f, 2.5f));
-	dynamicLaser->SetRelativeLocation(FVector(125.0f, 0.0f, 0.0f));
+	dynamicLaser->SetRelativeScale3D(FVector(0.005f, 0.005f, 1.5f));
+	dynamicLaser->SetRelativeLocation(FVector(75.0f, 0.0f, 0.0f));
 	dynamicLaser->SetRelativeRotation(FRotator(90.0f, 0.0f, 0.0f));
 	
 	drawingIndicatorMesh = NewObject<UStaticMeshComponent>(this, TEXT("DrawingIndicatorMesh"));
@@ -198,7 +198,7 @@ void ARadarViewPawn::BeginPlay()
 	}
 	drawingIndicatorMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	drawingIndicatorMesh->SetRelativeScale3D(FVector(0.05f, 0.05f, 0.1f));
-	drawingIndicatorMesh->SetRelativeLocation(FVector(250.0f, 0.0f, 0.0f));
+	drawingIndicatorMesh->SetRelativeLocation(FVector(150.0f, 0.0f, 0.0f));
 	drawingIndicatorMesh->SetRelativeRotation(FRotator(-90.0f, 0.0f, 0.0f));
 	UMaterial* baseMat = LoadObject<UMaterial>(nullptr, TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial"));
 	UMaterialInstanceDynamic* dynMatIndicator = UMaterialInstanceDynamic::Create(baseMat, this);
@@ -272,9 +272,21 @@ void ARadarViewPawn::Tick(float deltaTime)
 		}
 	}
 	
+	GlobalState* globalState = &GetWorld()->GetGameState<ARadarGameStateBase>()->globalState;
+	
+	// Update physical laser visual size based on settings
+	if (globalState) {
+		float lDist = globalState->laserDistance;
+		if (dynamicLaser) {
+			dynamicLaser->SetRelativeScale3D(FVector(0.005f, 0.005f, lDist / 100.0f));
+			dynamicLaser->SetRelativeLocation(FVector(lDist / 2.0f, 0.0f, 0.0f));
+		}
+		if (drawingIndicatorMesh) {
+			drawingIndicatorMesh->SetRelativeLocation(FVector(lDist, 0.0f, 0.0f));
+		}
+	}
 	
 	if (ARadarGameStateBase* GS = GetWorld()->GetGameState<ARadarGameStateBase>()){
-		GlobalState* globalState = &GS->globalState;
 		moveSpeed = globalState->moveSpeed * (1 + speedBoost * 3);
 		rotateSpeed = globalState->rotateSpeed;
 
@@ -351,7 +363,7 @@ void ARadarViewPawn::Tick(float deltaTime)
 				if (bIsErasing) {
 					EraseLineSegment();
 				} else if (!widgetInteraction->IsOverInteractableWidget() && !widgetInteraction->IsOverHitTestVisibleWidget()) {
-					FVector currentPos = widgetInteraction->GetComponentLocation() + widgetInteraction->GetForwardVector() * inspectorDistance;
+					FVector currentPos = widgetInteraction->GetComponentLocation() + widgetInteraction->GetForwardVector() * globalState->laserDistance;
 					if (bIsDrawingStroke) {
 						if (FVector::DistSquared(lastDrawPosition, currentPos) > 4.0f) { // 2 units min distance
 							DrawLineSegment(lastDrawPosition, currentPos);
@@ -371,20 +383,18 @@ void ARadarViewPawn::Tick(float deltaTime)
 		}
 		
 		// Inspector logic
-		if (globalState->bInspectorEnabled) {
-			if (!inspectorMesh->IsVisible()) {
-				inspectorMesh->SetVisibility(true);
-				inspectorText->SetVisibility(true);
+		if (GS->globalState.bInspectorEnabled) {
+			inspectorMesh->SetVisibility(true);
+			inspectorText->SetVisibility(true);
 				inspectorTextShadow->SetVisibility(true);
 				inspectorTooltip->SetVisibility(true);
 				inspectorTooltipShadow->SetVisibility(true);
 				inspectorHaloMesh->SetVisibility(true);
-			}
 			
 			FVector startPos = widgetInteraction->GetComponentLocation();
 			FVector forwardDir = widgetInteraction->GetForwardVector();
+			FVector probePos = startPos + forwardDir * globalState->laserDistance;
 			
-			FVector probePos = startPos + forwardDir * inspectorDistance;
 			inspectorMesh->SetWorldLocation(probePos);
 			
 			FString infoStr = TEXT("No Data");
@@ -785,9 +795,6 @@ void ARadarViewPawn::ToggleInspector() {
 	if (ARadarGameStateBase* GS = GetWorld()->GetGameState<ARadarGameStateBase>()) {
 		GlobalState* globalState = &GS->globalState;
 		globalState->bInspectorEnabled = !globalState->bInspectorEnabled;
-		if (globalState->bInspectorEnabled) {
-			inspectorDistance = 250.0f; // Default to end of the laser pointer
-		}
 	}
 }
 
@@ -919,8 +926,8 @@ void ARadarViewPawn::VRScrollRotateY(float value) {
 		ARadarGameStateBase* GS = GetWorld()->GetGameState<ARadarGameStateBase>();
 		if (GS && GS->globalState.bInspectorEnabled && FMath::Abs(value) > 0.1f) {
 			if (isButtonXHeld) {
-				// adjust inspector distance with lower sensitivity
-				inspectorDistance = FMath::Clamp(inspectorDistance + value * 10.0f, 10.0f, 5000.0f);
+				// adjust laser distance with lower sensitivity
+				GS->globalState.laserDistance = FMath::Clamp(GS->globalState.laserDistance + value * 10.0f, 10.0f, 5000.0f);
 			}
 		}
 	}

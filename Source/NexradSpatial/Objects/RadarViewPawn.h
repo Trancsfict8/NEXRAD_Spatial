@@ -105,6 +105,8 @@ public:
 	UPROPERTY(VisibleAnywhere)
 	class UStaticMeshComponent* inspectorMesh = NULL;
 	UPROPERTY(VisibleAnywhere)
+	class UStaticMeshComponent* dynamicLaser = NULL;
+	UPROPERTY(VisibleAnywhere)
 	class UStaticMeshComponent* drawingIndicatorMesh = NULL;
 	UPROPERTY(VisibleAnywhere)
 	class UTextRenderComponent* inspectorText = NULL;
@@ -116,8 +118,6 @@ public:
 	class UTextRenderComponent* inspectorTooltipShadow = NULL;
 	UPROPERTY(VisibleAnywhere)
 	class UStaticMeshComponent* inspectorHaloMesh = NULL;
-	
-	float inspectorDistance = 250.0f; // 2.5m default distance (end of laser pointer)
 	
 	void BuildVRAvatar();
 

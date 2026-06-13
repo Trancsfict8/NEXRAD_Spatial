@@ -785,6 +785,14 @@ TSharedRef<SWidget> SVRMenuWidget::BuildSettingsTab()
 
 		+ SVerticalBox::Slot().AutoHeight()[ MakeLabel(TEXT("Controls & UI")) ]
 
+		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
+		[
+			MakeSlider(TEXT("Laser Distance"), 
+				[this]() { return GetGlobalState() ? (GetGlobalState()->laserDistance - 10.0f) / 990.0f : 0.0f; },
+				[this](float v) { if (GetGlobalState()) GetGlobalState()->laserDistance = 10.0f + (v * 990.0f); }, 
+				TEXT("Laser Distance: {0}"))
+		]
+
 		+ SVerticalBox::Slot().AutoHeight()[ MakeLabel(TEXT("Drawing Tool")) ]
 
 		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
