@@ -483,7 +483,7 @@ TSharedRef<SWidget> SVRMenuWidget::BuildRadarTab()
 		[
 			MakeSlider(TEXT("Elevation Exaggeration"), 
 				[this]() { return GetGlobalState() ? (GetGlobalState()->elevationExaggeration - 1.0f) / 3.0f : 0.0f; },
-				[this](float v) { if (GetGlobalState()) GetGlobalState()->elevationExaggeration = 1.0f + (v * 3.0f); }, 
+				[this](float v) { if (GetGlobalState()) { GetGlobalState()->elevationExaggeration = 1.0f + (v * 3.0f); GetGlobalState()->EmitEvent("GlobeUpdate"); } }, 
 				TEXT("Elevation Exaggeration: {0}"))
 		]
 		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
@@ -763,7 +763,7 @@ TSharedRef<SWidget> SVRMenuWidget::BuildSettingsTab()
 		[
 			MakeSlider(TEXT("Elevation Exaggeration"), 
 				[this]() { return GetGlobalState() ? (GetGlobalState()->elevationExaggeration - 1.0f) / 3.0f : 0.0f; },
-				[this](float v) { if (GetGlobalState()) GetGlobalState()->elevationExaggeration = 1.0f + (v * 3.0f); }, 
+				[this](float v) { if (GetGlobalState()) { GetGlobalState()->elevationExaggeration = 1.0f + (v * 3.0f); GetGlobalState()->EmitEvent("GlobeUpdate"); } }, 
 				TEXT("Elevation Exaggeration: {0}x"))
 		]
 

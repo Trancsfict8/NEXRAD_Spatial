@@ -102,7 +102,7 @@ void ALocationMarkerManager::UpdateWaypointMarkers() {
 			marker->latitude = waypoint->latitude;
 			marker->longitude = waypoint->longitude;
 			marker->altitude = waypoint->altitude;
-			auto vector = globalState->globe->GetPointScaledDegrees(marker->latitude, marker->longitude, marker->altitude);
+			auto vector = globalState->globe->GetPointScaledDegrees(marker->latitude, marker->longitude, marker->altitude * globalState->elevationExaggeration);
 			marker->SetActorLocation(FVector(vector.x, vector.y, vector.z));
 			marker->SetText(waypoint->name);
 			// set color while converting to linear color space
@@ -123,7 +123,7 @@ void ALocationMarkerManager::AddSiteMarkers() {
 		// this is O(n) on the main thread every tick but there are not enough radars in the world to justify otherwise
 		for(size_t i = 0; i < NexradSites::numberOfSites; i++){
 			NexradSites::Site* site = &NexradSites::sites[i];
-			auto vector = globalState->globe->GetPointScaledDegrees(site->latitude, site->longitude, site->altitude);
+			auto vector = globalState->globe->GetPointScaledDegrees(site->latitude, site->longitude, site->altitude * globalState->elevationExaggeration);
 			FVector vectorF = FVector(vector.x, vector.y, vector.z);
 			std::string name = "site-" + std::string(site->name);
 			// if close enough to camera add to world
@@ -149,7 +149,7 @@ void ALocationMarkerManager::UpdateMarkerLocations() {
 	GlobalState* globalState = &GetWorld()->GetGameState<ARadarGameStateBase>()->globalState;
 	// set locations of all markers
 	for (auto marker : locationMarkerObjects) {
-		auto vector = globalState->globe->GetPointScaledDegrees(marker.second->latitude, marker.second->longitude, marker.second->altitude);
+		auto vector = globalState->globe->GetPointScaledDegrees(marker.second->latitude, marker.second->longitude, marker.second->altitude * globalState->elevationExaggeration);
 		marker.second->SetActorLocation(FVector(vector.x, vector.y, vector.z));
 	}
 }

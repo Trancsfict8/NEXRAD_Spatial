@@ -282,6 +282,14 @@ void ARadarVolumeRender::BeginPlay()
 		radarMaterialInstance->SetScalarParameterValue(TEXT("StepSize"), stepSize);
 		radarMaterialInstance->SetScalarParameterValue(TEXT("Fuzz"), globalState->enableFuzz ? 1 : 0);
 	}));
+	callbackIds.push_back(globalState->RegisterEvent("GlobeUpdate", [this, globalState](std::string stringData, void* extraData) {
+		if (this->radarData != NULL) {
+			globalState->globe->SetCenter(0, 0, -globalState->globe->surfaceRadius - (this->radarData->stats.altitude * globalState->elevationExaggeration));
+			auto vector = globalState->globe->GetPointScaledDegrees(this->radarData->stats.latitude, this->radarData->stats.longitude, this->radarData->stats.altitude * globalState->elevationExaggeration);
+			this->radarMaterialInstance->SetVectorParameterValue(TEXT("Center"), FVector(vector.x, vector.y, vector.z));
+			this->SetActorLocation(FVector(vector.x, vector.y, vector.z));
+		}
+	}));
 	callbackIds.push_back(globalState->RegisterEvent("ChangeProduct", [this, globalState](std::string stringData, void* extraData) {
 		if (extraData == NULL) {
 			return;
@@ -374,10 +382,10 @@ void ARadarVolumeRender::HandleRadarDataEvent(RadarCollection::RadarUpdateEvent 
 		//fprintf(stderr, "Location lat:%f lon:%f \n", event.data->stats.latitude, event.data->stats.longitude);
 		GlobalState* globalState = &GetWorld()->GetGameState<ARadarGameStateBase>()->globalState;
 		
-		globalState->globe->SetCenter(0, 0, -globalState->globe->surfaceRadius - event.data->stats.altitude);
+		globalState->globe->SetCenter(0, 0, -globalState->globe->surfaceRadius - (event.data->stats.altitude * globalState->elevationExaggeration));
 		globalState->globe->SetTopCoordinates(event.data->stats.latitude, event.data->stats.longitude);
 		
-		auto vector = globalState->globe->GetPointScaledDegrees(event.data->stats.latitude, event.data->stats.longitude, event.data->stats.altitude);
+		auto vector = globalState->globe->GetPointScaledDegrees(event.data->stats.latitude, event.data->stats.longitude, event.data->stats.altitude * globalState->elevationExaggeration);
 		radarMaterialInstance->SetVectorParameterValue(TEXT("Center"), FVector(vector.x, vector.y, vector.z));
 		this->SetActorLocation(FVector(vector.x, vector.y, vector.z));
 		
