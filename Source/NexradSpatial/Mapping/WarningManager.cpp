@@ -54,6 +54,17 @@ void AWarningManager::Tick(float DeltaTime)
 	if (!globalState) return;
 	globe = globalState->globe;
 	
+	if (lastElevationExaggeration != globalState->elevationExaggeration) {
+		lastElevationExaggeration = globalState->elevationExaggeration;
+		for (auto& pair : polylines) {
+			if (pair.second) pair.second->Destroy();
+		}
+		polylines.clear();
+		for (GISObject* obj : warningObjects) {
+			obj->shown = false;
+		}
+	}
+	
 	lastFetchTime += DeltaTime;
 	if (lastFetchTime > fetchInterval) {
 		lastFetchTime = 0;

@@ -413,6 +413,20 @@ TSharedRef<SWidget> SVRMenuWidget::BuildRadarTab()
 				[this]() { return GetGlobalState() && GetGlobalState()->pollData; }, 
 				[this](bool v) { if (GetGlobalState()) GetGlobalState()->pollData = v; })
 		]
+		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
+		[
+			MakeCheckbox(TEXT("Show Level 3 TVS/Hail Markers"), 
+				[this]() { return GetGlobalState() && GetGlobalState()->showLevel3StormAttributes; }, 
+				[this](bool v) { if (GetGlobalState()) GetGlobalState()->showLevel3StormAttributes = v; })
+		]
+		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(8,0,0,8))
+		[
+			SNew(STextBlock)
+			.Text(FText::FromString(TEXT("Level 3 real-time alerts:\nPurple Cones = Tornado Vortex Signatures (TVS)\nGreen Spheres = Hail Index")))
+			.Font(LabelFont())
+			.AutoWrapText(true)
+			.ColorAndOpacity(FSlateColor(FLinearColor(0.8f, 0.8f, 0.8f)))
+		]
 		+ SVerticalBox::Slot().AutoHeight()[ MakeLabel(TEXT("View Mode")) ]
 		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
 		[
@@ -875,6 +889,13 @@ TSharedRef<SWidget> SVRMenuWidget::BuildSettingsTab()
 				[this]() { return GetGlobalState() ? (GetGlobalState()->downloadPollInterval - 30.0f) / 270.0f : 0.0f; },
 				[this](float v) { if (GetGlobalState()) GetGlobalState()->downloadPollInterval = 30.0f + (v * 270.0f); }, 
 				TEXT("Data Download Interval: {0} seconds"))
+		]
+
+		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
+		[
+			MakeCheckbox(TEXT("Delete Old Scans (Keep 2 Hours)"), 
+				[this]() { return GetGlobalState() && GetGlobalState()->downloadDeleteAfter == 7200.0f; }, 
+				[this](bool v) { if (GetGlobalState()) GetGlobalState()->downloadDeleteAfter = v ? 7200.0f : 0.0f; })
 		]
 
 		+ SVerticalBox::Slot().AutoHeight()[ MakeLabel(TEXT("System")) ]

@@ -16,6 +16,7 @@
 #include "../Radar/NexradSites/NexradSites.h"
 #include "../Mapping/LocationMarker.h"
 #include "../Mapping/WarningManager.h"
+#include "../Mapping/StormAttributeManager.h"
 #include "../Application/GlobalState.h"
 #include "../UI/ClickableInterface.h"
 #include "../UI/ImGuiController.h"
@@ -242,6 +243,7 @@ void ARadarViewPawn::BeginPlay()
 	}
 	
 	GetWorld()->SpawnActor<AWarningManager>(AWarningManager::StaticClass());
+	GetWorld()->SpawnActor<AStormAttributeManager>(AStormAttributeManager::StaticClass());
 	
 	// Do not auto-locate or teleport if we are in the Disclaimer level
 	if (!GetWorld()->GetMapName().Contains(TEXT("L_DisclaimerStart")))

@@ -38,6 +38,11 @@ inline FVector SimpleVector3ToFVector(SimpleVector3<float> vec){
 void AGISPolyline::DisplayObject(GISObject* object, GISGroup* group){
 	static Globe globe = {};
 	
+	float elevExag = 2.0f;
+	if (GetWorld() && GetWorld()->GetGameState<ARadarGameStateBase>()) {
+		elevExag = GetWorld()->GetGameState<ARadarGameStateBase>()->globalState.elevationExaggeration;
+	}
+	
 	TArray<FVector> vertices = {};
 	TArray<FVector> normals = {};
 	TArray<int> triangles = {};
@@ -104,7 +109,7 @@ void AGISPolyline::DisplayObject(GISObject* object, GISGroup* group){
 			subPoint.Add(pointOffset);
 			subPoint = globe.GetLocationScaled(subPoint);
 			float elevation = ElevationData::GetDataAtPointRadians(subPoint.z, subPoint.y);
-			subPoint.radius() = 500 + elevation;
+			subPoint.radius() = 500 + (elevation * elevExag);
 			subPoint = globe.GetPointScaled(subPoint);
 			vertices.Add(SimpleVector3ToFVector(subPoint + outwards));
 			vertices.Add(SimpleVector3ToFVector(subPoint - outwards));

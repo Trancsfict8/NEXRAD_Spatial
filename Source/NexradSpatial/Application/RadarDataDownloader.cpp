@@ -265,7 +265,8 @@ public:
 				std::vector<FileSizePair> files = {};
 				char* buffer = (char*)dirListDownloader.buffer;
 				buffer[dirListDownloader.bufferSize - 1] = 0;
-				char* line = strtok(buffer, "\n");
+				char* context = NULL;
+				char* line = strtok_s(buffer, "\n", &context);
 				// loop through each line of the string
 				while( line != NULL ) {
 					std::string lineString = std::string(line);
@@ -291,7 +292,7 @@ public:
 							files.push_back(FileSizePair(part2, (size_t)std::stoll(part1)));
 						}
 					}
-					line = strtok(NULL, "\n");
+					line = strtok_s(NULL, "\n", &context);
 				}
 				
 				int errorCount = 0;

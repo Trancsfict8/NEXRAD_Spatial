@@ -42,4 +42,5 @@ public:
 	Globe* globe = nullptr;
 	float lastFetchTime = 0.0f;
 	float fetchInterval = 120.0f; // Every 2 minutes
+	float lastElevationExaggeration = -1.0f;
 };

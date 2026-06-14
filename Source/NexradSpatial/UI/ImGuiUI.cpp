@@ -436,6 +436,13 @@ void ImGuiUI::MainUI()
 					CustomTooltipForPrevious("If the slice should be rendered as a volumetric slice instead of 2D");
 				}
 				
+				ImGui::Separator();
+				ImGui::Checkbox("Show Level 3 Storm Attributes (TVS/Hail)", &globalState.showLevel3StormAttributes);
+				CustomTooltipForPrevious("Toggles the 3D markers for Level 3 severe weather signatures.");
+				ImGui::TextWrapped("Level 3 NEXRAD algorithms identify severe storm cells in real-time.\n"
+								   "Cones = Tornado Vortex Signatures (TVS) indicating strong rotation.\n"
+								   "Spheres = Hail Index indicating probability of severe hail.");
+								   
 				ImGui::TreePop();
 			}
 			ImGui::Separator();

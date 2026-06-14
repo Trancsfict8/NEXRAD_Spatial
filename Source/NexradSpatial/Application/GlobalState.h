@@ -123,7 +123,7 @@ public:
 	float downloadPollInterval = 60; // how often a check is done for new files
 	bool openDownloadDropdown = false; // when set to true the download dropdown will be opened to alert the user to its presence
 	int downloadPreviousCount = 10; // how many previous files to get before the current one
-	float downloadDeleteAfter = 0; // if more than zero then files older than this many seconds will be deleted
+	float downloadDeleteAfter = 7200; // if more than zero then files older than this many seconds will be deleted
 	
 	bool discordPresence = true; // if discord presence is enabled
 	int radarCacheSize = 75; // number of volumes that can 
@@ -158,6 +158,7 @@ public:
 	bool showSevereWarnings = true;
 	bool showFlashFloodWarnings = true;
 	bool showMarineWarnings = true;
+	bool showLevel3StormAttributes = true;
 	
 	void test(); // test fuction
 	
