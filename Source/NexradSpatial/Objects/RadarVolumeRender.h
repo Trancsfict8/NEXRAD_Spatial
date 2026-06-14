@@ -60,6 +60,10 @@ public:
 	double interpolationStartTime = 0;
 	double interpolationEndTime = 0;
 	
+	// Dynamic Volumetric Culling
+	float DynamicCameraClipDistance = 1500.0f;
+
+	
 	// index used for choosing noise. wraps at 64
 	int frameIndex = 0;
 	

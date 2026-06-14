@@ -588,6 +588,30 @@ void ARadarVolumeRender::Tick(float DeltaTime)
 			loadingTextComponent->SetWorldScale3D(FVector(newScale));
 		}
 	}
+
+	// Performance Monitor & Adaptive Volumetric Throttle
+	// Target: 11.1ms for 90Hz
+	float FrameTimeMs = DeltaTime * 1000.0f;
+	if (globalState->enableAdaptiveVolumetricThrottle) {
+		if (FrameTimeMs > 10.5f) {
+			// Smoothly decrease clipping distance to save performance
+			DynamicCameraClipDistance = FMath::FInterpTo(DynamicCameraClipDistance, 300.0f, DeltaTime, 1.5f);
+		} else if (FrameTimeMs < 8.5f) {
+			// Smoothly expand clipping distance back out
+			DynamicCameraClipDistance = FMath::FInterpTo(DynamicCameraClipDistance, 1500.0f, DeltaTime, 1.0f);
+		}
+	} else {
+		// Optimization disabled, set to maximum distance
+		DynamicCameraClipDistance = FMath::FInterpTo(DynamicCameraClipDistance, 1500.0f, DeltaTime, 1.0f);
+	}
+	
+	// Establish Scale-Accurate Constraints (1 UU = 100m)
+	DynamicCameraClipDistance = FMath::Clamp(DynamicCameraClipDistance, 300.0f, 1500.0f);
+
+	if(radarMaterialInstance) {
+		radarMaterialInstance->SetScalarParameterValue(TEXT("DynamicCameraClipDistance"), DynamicCameraClipDistance);
+	}
+
 	if(globalState->temporalInterpolation != doTimeInterpolation){
 		doTimeInterpolation = globalState->temporalInterpolation;
 		InitializeTextures();

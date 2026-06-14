@@ -193,6 +193,7 @@ void ASettingsSaver::LoadSettings() {
 		LOAD_MACRO_FLOAT(quality);
 		LOAD_MACRO_FLOAT(qualityCustomStepSize);
 		LOAD_MACRO_BOOL(enableFuzz);
+		LOAD_MACRO_BOOL(enableAdaptiveVolumetricThrottle);
 		LOAD_MACRO_BOOL(temporalAntiAliasing);
 		LOAD_MACRO_FLOAT(radarCacheSize);
 		LOAD_MACRO_BOOL(discordPresence);
@@ -304,6 +305,7 @@ void ASettingsSaver::SaveSettings() {
 			SAVE_MACRO_FLOAT(qualityCustomStepSize);
 		}
 		SAVE_MACRO_BOOL(enableFuzz);
+		SAVE_MACRO_BOOL(enableAdaptiveVolumetricThrottle);
 		SAVE_MACRO_BOOL(temporalAntiAliasing);
 		SAVE_MACRO_FLOAT(radarCacheSize);
 		SAVE_MACRO_BOOL(discordPresence);
@@ -361,6 +363,7 @@ void ASettingsSaver::ResetBasicSettings() {
 		// RESET_MACRO(quality);
 		// RESET_MACRO(qualityCustomStepSize);
 		RESET_MACRO(enableFuzz);
+		RESET_MACRO(enableAdaptiveVolumetricThrottle);
 		// RESET_MACRO(temporalAntiAliasing);
 		// --Joke--
 		RESET_MACRO(audioControlledCutoff);
@@ -445,6 +448,7 @@ void ASettingsSaver::ResetAllSettings() {
 		RESET_MACRO(quality);
 		RESET_MACRO(qualityCustomStepSize);
 		RESET_MACRO(enableFuzz);
+		RESET_MACRO(enableAdaptiveVolumetricThrottle);
 		RESET_MACRO(temporalAntiAliasing);
 		RESET_MACRO(radarCacheSize);
 		RESET_MACRO(discordPresence);

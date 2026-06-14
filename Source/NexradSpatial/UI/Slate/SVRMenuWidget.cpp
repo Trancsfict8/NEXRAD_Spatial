@@ -475,8 +475,8 @@ TSharedRef<SWidget> SVRMenuWidget::BuildRadarTab()
 		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
 		[
 			MakeSlider(TEXT("Opacity"), 
-				[this]() { return GetGlobalState() ? GetGlobalState()->opacityMultiplier : 1.0f; },
-				[this](float v) { if (GetGlobalState()) GetGlobalState()->opacityMultiplier = v; }, 
+				[this]() { return GetGlobalState() ? GetGlobalState()->opacityMultiplier / 10.0f : 0.1f; },
+				[this](float v) { if (GetGlobalState()) GetGlobalState()->opacityMultiplier = v * 10.0f; }, 
 				TEXT("Opacity: {0}"))
 		]
 		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
@@ -738,6 +738,13 @@ TSharedRef<SWidget> SVRMenuWidget::BuildSettingsTab()
 			MakeCheckbox(TEXT("Enable TAA (Anti-Aliasing)"), 
 				[this]() { return GetGlobalState() && GetGlobalState()->temporalAntiAliasing; }, 
 				[this](bool v) { if (GetGlobalState()) GetGlobalState()->temporalAntiAliasing = v; })
+		]
+
+		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
+		[
+			MakeCheckbox(TEXT("Adaptive Performance Throttle"), 
+				[this]() { return GetGlobalState() && GetGlobalState()->enableAdaptiveVolumetricThrottle; }, 
+				[this](bool v) { if (GetGlobalState()) GetGlobalState()->enableAdaptiveVolumetricThrottle = v; })
 		]
 
 		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))

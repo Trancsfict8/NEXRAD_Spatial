@@ -58,6 +58,7 @@ public:
 	bool developmentMode = false; // show development features
 	bool vsync = true; // enable vsync
 	bool enableFuzz = true; // add noise to shader to achieve a dithering effect
+	bool enableAdaptiveVolumetricThrottle = true; // dynamically limit draw distance to maintain FPS
 	bool temporalAntiAliasing = false; // temporal anti aliasing can smooth out fuzz, it is used in the pawn
 	bool audioControlledHeight = false;
 	bool audioControlledOpacity = false;

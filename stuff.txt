@@ -1,2 +1,2 @@
 set max fps in editor
-t.MaxFPS 60
+t.MaxFPS 90

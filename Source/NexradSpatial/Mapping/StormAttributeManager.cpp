@@ -200,7 +200,8 @@ void AStormAttributeManager::OnAttributesFetched(FHttpRequestPtr Request, FHttpR
                         attr.type = TEXT("TVS");
                         newAttrs.Add(attr);
                     } 
-                    if (poh >= 50.0f) {
+                    // Only show hail if probability is high AND the estimated size is at least 0.25 inches
+                    if (poh >= 50.0f && attr.maxSize >= 0.25f) {
                         FStormAttr hailAttr = attr;
                         hailAttr.type = TEXT("HAIL");
                         newAttrs.Add(hailAttr);

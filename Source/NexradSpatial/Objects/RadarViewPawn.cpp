@@ -16,6 +16,7 @@
 #include "../Radar/NexradSites/NexradSites.h"
 #include "../Mapping/LocationMarker.h"
 #include "../Mapping/WarningManager.h"
+#include "../Mapping/Data/ElevationData.h"
 #include "../Mapping/StormAttributeManager.h"
 #include "../Application/GlobalState.h"
 #include "../UI/ClickableInterface.h"
@@ -238,6 +239,13 @@ void ARadarViewPawn::BeginPlay()
 			if (globalState->globe != NULL) {
 				SimpleVector3<double> targetPos = globalState->globe->GetPointScaled(SimpleVector3<double>(currentLatLon.x, currentLatLon.y, currentLatLon.z));
 				SetActorLocation(FVector(targetPos.x, targetPos.y, targetPos.z));
+				
+				for (ALocationMarker* marker : spawnedMarkers) {
+					if (marker) {
+						SimpleVector3<double> markerPos = globalState->globe->GetPointScaledDegrees(marker->latitude, marker->longitude, marker->altitude * globalState->elevationExaggeration);
+						marker->SetActorLocation(FVector(markerPos.x, markerPos.y, markerPos.z));
+					}
+				}
 			}
 		}));
 	}
@@ -1192,8 +1200,18 @@ void ARadarViewPawn::InterrogateSpatialTriggered() {
 					if (UWorld* World = WeakThis->GetWorld()) {
 						ALocationMarker* marker = World->SpawnActor<ALocationMarker>(ALocationMarker::StaticClass());
 						if (marker) {
-							FVector Normal = (hitLocation - SphereCenter).GetSafeNormal();
-							marker->SetActorLocation(hitLocation + Normal * 50.0f); // Raise significantly to clear high terrain
+							ARadarGameStateBase* GS = World->GetGameState<ARadarGameStateBase>();
+							float elevation = 0.0f;
+							FVector newLoc = hitLocation;
+							
+							if (GS && GS->globalState.globe) {
+								elevation = ElevationData::GetDataAtPointRadians(lat * M_PI / 180.0, lon * M_PI / 180.0);
+								SimpleVector3<double> markerPos = GS->globalState.globe->GetPointScaledDegrees(lat, lon, elevation * GS->globalState.elevationExaggeration);
+								newLoc = FVector(markerPos.x, markerPos.y, markerPos.z);
+							}
+							
+							marker->SetActorLocation(newLoc);
+							marker->altitude = elevation;
 							marker->latitude = lat;
 							marker->longitude = lon;
 							marker->SetText(TCHAR_TO_UTF8(*FinalAddress));

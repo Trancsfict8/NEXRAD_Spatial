@@ -65,6 +65,17 @@ void ALocationMarker::Tick(float DeltaTime) {
 		FRotator rotation = FRotationMatrix::MakeFromX(selfLocation - playerLocation).Rotator();
 		SetActorRotation(rotation);
 	}
+	
+	if (markerType == MarkerTypeRadarSite) {
+		ARadarGameStateBase* gameMode = GetWorld()->GetGameState<ARadarGameStateBase>();
+		if (gameMode != NULL) {
+			if (gameMode->globalState.downloadSiteId == data) {
+				SetColor(FVector(0.0f, 1.0f, 0.0f));
+			} else {
+				SetColor(FVector(std::pow(gameMode->globalState.siteMarkerColorR / 255.0f, 2.2f), std::pow(gameMode->globalState.siteMarkerColorG / 255.0f, 2.2f), std::pow(gameMode->globalState.siteMarkerColorB / 255.0f, 2.2f)));
+			}
+		}
+	}
 }
 
 void ALocationMarker::SetText(std::string text) {
@@ -72,6 +83,8 @@ void ALocationMarker::SetText(std::string text) {
 }
 
 void ALocationMarker::SetColor(FVector color) {
+	if (color == originalColor) return;
+	
 	// initialize material instances if not already done and the color is not white
 	if(meshMaterialInstance == NULL && (color.X != 1 || color.Y != 1 || color.Z != 1)){
 		meshMaterialInstance = UMaterialInstanceDynamic::Create(meshMaterial, this);

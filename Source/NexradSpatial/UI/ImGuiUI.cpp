@@ -365,7 +365,7 @@ void ImGuiUI::MainUI()
 				SetCustomInputTooltip("Limits the minimum value that will be displayed in the radar volume");
 				CustomFloatInput("Cutoff", 0, 1, &globalState.cutoff, &globalState.defaults->cutoff, CustomInput_SliderOnly);
 				SetCustomInputTooltip("How transparent the radar volume is with larger values being more opaque");
-				CustomFloatInput("Opacity", 0.2, 4, &globalState.opacityMultiplier, &globalState.defaults->opacityMultiplier);
+				CustomFloatInput("Opacity", 0.2, 10, &globalState.opacityMultiplier, &globalState.defaults->opacityMultiplier);
 				SetCustomInputTooltip("Multiplies the height of the radar volume");
 				CustomFloatInput("Height Exaggeration", 1, 4, &globalState.verticalScale, &globalState.defaults->verticalScale);
 				SetCustomInputTooltip("Multiplies the height of the map terrain");
@@ -851,6 +851,9 @@ void ImGuiUI::MainUI()
 					CustomTooltipForPrevious("Custom step size for ray marching, lower values decrease graininess at expense of performance");
 				}
 				
+				
+				ImGui::Checkbox("Adaptive Performance Throttle", &globalState.enableAdaptiveVolumetricThrottle);
+				CustomTooltipForPrevious("Dynamically limit draw distance to maintain FPS");
 				
 				if(ImGui::Checkbox("Enable Fuzz", &globalState.enableFuzz)){
 					globalState.EmitEvent("UpdateVolumeParameters");
