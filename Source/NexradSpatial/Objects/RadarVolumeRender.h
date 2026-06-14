@@ -10,11 +10,11 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "Engine/StaticMesh.h"
-#include "Components/StaticMeshComponent.h"
-#include "UObject/Object.h"
-#include "Materials/Material.h"
-#include "Engine/Texture2D.h"
+
+class UStaticMesh;
+class UStaticMeshComponent;
+class UMaterial;
+class UTexture2D;
 //#include "Engine/TextureRenderTarget2D.h"
 //#include "Engine/CanvasRenderTarget2D.h"
 #include "RadarVolumeRender.generated.h"

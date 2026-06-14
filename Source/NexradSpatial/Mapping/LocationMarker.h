@@ -3,9 +3,7 @@
 #include <string>
 
 #include "CoreMinimal.h"
-#include "UObject/Object.h"
-#include "UObject/Object.h"
-#include "Components/BoxComponent.h"
+class UBoxComponent;
 #include "GameFramework/Actor.h"
 #include "../UI/ClickableInterface.h"
 #include "LocationMarker.generated.h"

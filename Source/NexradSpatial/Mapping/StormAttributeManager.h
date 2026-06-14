@@ -3,12 +3,9 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Interfaces/IHttpRequest.h"
-#include "Interfaces/IHttpRequest.h"
-#include "Dom/JsonObject.h"
-#include "Serialization/JsonReader.h"
-#include "Serialization/JsonSerializer.h"
-#include "Components/InstancedStaticMeshComponent.h"
-#include "Components/TextRenderComponent.h"
+
+class UInstancedStaticMeshComponent;
+class UTextRenderComponent;
 #include "StormAttributeManager.generated.h"
 
 class Globe;

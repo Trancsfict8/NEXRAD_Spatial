@@ -2,7 +2,6 @@
 
 #include "RadarData.h"
 #include "RadarDataHolder.h"
-#include "AsyncTask.h"
 
 #include <string>
 #include <vector>

@@ -1,6 +1,7 @@
 
 
 #include "RadarDataHolder.h"
+#include "AsyncTask.h"
 #include "RadarCollection.h"
 #include "RadarReader.h"
 #include "Products/RadarProduct.h"

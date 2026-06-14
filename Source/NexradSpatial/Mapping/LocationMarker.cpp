@@ -10,6 +10,7 @@
 #include "Materials/Material.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Components/StaticMeshComponent.h"
+#include "Components/BoxComponent.h"
 #include "Components/TextRenderComponent.h"
 #include "Camera/CameraComponent.h"
 #include "../EngineHelpers/StringUtils.h"

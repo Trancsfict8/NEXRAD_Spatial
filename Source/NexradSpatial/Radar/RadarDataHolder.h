@@ -1,7 +1,8 @@
 #pragma once
 
 #include "RadarData.h"
-#include "AsyncTask.h"
+
+class AsyncTaskRunner;
 
 #include <map>
 #include <vector>

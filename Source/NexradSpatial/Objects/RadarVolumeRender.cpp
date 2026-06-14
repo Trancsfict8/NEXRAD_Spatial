@@ -27,6 +27,10 @@
 
 
 #include "UObject/Object.h"
+#include "Engine/StaticMesh.h"
+#include "Components/StaticMeshComponent.h"
+#include "Materials/Material.h"
+#include "Engine/Texture2D.h"
 #include "UObject/ConstructorHelpers.h"
 #include "Engine/World.h"
 #include "TextureResource.h"
