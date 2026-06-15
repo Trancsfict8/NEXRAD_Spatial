@@ -202,7 +202,10 @@ AMapMesh::AMapMesh(){
 	material = ConstructorHelpers::FObjectFinder<UMaterial>(TEXT("Material'/Game/Materials/Map.Map'")).Object;
 	materialInstance = UMaterialInstanceDynamic::Create(material, this, "MapMeshMaterialInstance");
 	proceduralMesh = CreateDefaultSubobject<UProceduralMeshComponent>("ProceduralMesh");
-	proceduralMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	proceduralMesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	proceduralMesh->SetCollisionObjectType(ECC_WorldDynamic);
+	proceduralMesh->SetCollisionResponseToAllChannels(ECR_Ignore);
+	proceduralMesh->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
 	proceduralMesh->bUseAsyncCooking = true;
 	RootComponent = proceduralMesh;
 }

@@ -16,6 +16,7 @@
 #include "../Radar/NexradSites/NexradSites.h"
 #include "../Mapping/LocationMarker.h"
 #include "../Mapping/WarningManager.h"
+#include "../Mapping/MapMesh.h"
 #include "../Mapping/Data/ElevationData.h"
 #include "../Mapping/StormAttributeManager.h"
 #include "../Application/GlobalState.h"
@@ -1089,44 +1090,61 @@ void ARadarViewPawn::InterrogateSpatialTriggered() {
 	FVector SphereCenter(globe->center.x * globe->scale, globe->center.y * globe->scale, globe->center.z * globe->scale);
 	double SphereRadius = globe->surfaceRadius * globe->scale;
 
-	// Mathematical Ray-Sphere Intersection
-	FVector L = SphereCenter - RayOrigin;
-	double tca = FVector::DotProduct(L, RayDir);
-	if (tca < 0) {
-		UE_LOG(LogTemp, Error, TEXT("[DEBUG] Laser is pointing AWAY from the globe! tca: %f"), tca);
-		fprintf(stdout, "[DEBUG] Laser is pointing AWAY from the globe!\n");
-		if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Laser Pointing Away from Globe"));
-		return;
-	}
+	FVector hitLocation;
+	bool bHitMap = false;
 
-	double d2 = L.SizeSquared() - tca * tca;
-	double radius2 = SphereRadius * SphereRadius;
-	
-	if (d2 > radius2) {
-		UE_LOG(LogTemp, Error, TEXT("[DEBUG] Laser missed the globe entirely! d2: %f, r2: %f"), d2, radius2);
-		fprintf(stdout, "[DEBUG] Laser missed the globe entirely!\n");
-		if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Laser Missed Globe"));
-		return;
-	}
-
-	double thc = FMath::Sqrt(radius2 - d2);
-	double t0 = tca - thc;
-	double t1 = tca + thc;
-
-	double t = (t0 < t1) ? t0 : t1;
-	if (t < 0) {
-		t = (t0 < t1) ? t1 : t0;
-		if (t < 0) {
-			UE_LOG(LogTemp, Error, TEXT("[DEBUG] Inside globe, pointing away?"));
-			return;
+	FCollisionQueryParams params;
+	params.AddIgnoredActor(this);
+	FHitResult traceHit;
+	if (GetWorld()->LineTraceSingleByChannel(traceHit, RayOrigin, RayOrigin + RayDir * 1000000.0f, ECC_Visibility, params)) {
+		if (traceHit.GetActor() && traceHit.GetActor()->IsA(AMapMesh::StaticClass())) {
+			hitLocation = traceHit.Location;
+			bHitMap = true;
+			UE_LOG(LogTemp, Warning, TEXT("[DEBUG] LineTrace Hit MapMesh at %f %f %f"), hitLocation.X, hitLocation.Y, hitLocation.Z);
+			if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("Laser Hit Map Surface"));
 		}
 	}
 
-	FVector hitLocation = RayOrigin + RayDir * t;
-	
-	UE_LOG(LogTemp, Warning, TEXT("[DEBUG] Math Intersection Hit! Actor: GlobeSphere"));
-	fprintf(stdout, "[DEBUG] Math Intersection Hit! Actor: GlobeSphere\n");
-	if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, TEXT("Globe Mathematically Intersected!"));
+	if (!bHitMap) {
+		// Mathematical Ray-Sphere Intersection
+		FVector L = SphereCenter - RayOrigin;
+		double tca = FVector::DotProduct(L, RayDir);
+		if (tca < 0) {
+			UE_LOG(LogTemp, Error, TEXT("[DEBUG] Laser is pointing AWAY from the globe! tca: %f"), tca);
+			fprintf(stdout, "[DEBUG] Laser is pointing AWAY from the globe!\n");
+			if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Laser Pointing Away from Globe"));
+			return;
+		}
+
+		double d2 = L.SizeSquared() - tca * tca;
+		double radius2 = SphereRadius * SphereRadius;
+		
+		if (d2 > radius2) {
+			UE_LOG(LogTemp, Error, TEXT("[DEBUG] Laser missed the globe entirely! d2: %f, r2: %f"), d2, radius2);
+			fprintf(stdout, "[DEBUG] Laser missed the globe entirely!\n");
+			if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Laser Missed Globe"));
+			return;
+		}
+
+		double thc = FMath::Sqrt(radius2 - d2);
+		double t0 = tca - thc;
+		double t1 = tca + thc;
+
+		double t = (t0 < t1) ? t0 : t1;
+		if (t < 0) {
+			t = (t0 < t1) ? t1 : t0;
+			if (t < 0) {
+				UE_LOG(LogTemp, Error, TEXT("[DEBUG] Inside globe, pointing away?"));
+				return;
+			}
+		}
+
+		hitLocation = RayOrigin + RayDir * t;
+		
+		UE_LOG(LogTemp, Warning, TEXT("[DEBUG] Math Intersection Hit! Actor: GlobeSphere"));
+		fprintf(stdout, "[DEBUG] Math Intersection Hit! Actor: GlobeSphere\n");
+		if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, TEXT("Globe Mathematically Intersected!"));
+	}
 
 	SimpleVector3<double> point(hitLocation.X, hitLocation.Y, hitLocation.Z);
 	SimpleVector3<double> coords = globe->GetLatLonAltDegrees(point);
