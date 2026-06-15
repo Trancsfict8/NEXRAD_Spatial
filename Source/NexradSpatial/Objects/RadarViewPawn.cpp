@@ -21,6 +21,7 @@
 #include "../Mapping/StormAttributeManager.h"
 #include "../Application/GlobalState.h"
 #include "../Application/DisclaimerDirectorBase.h"
+#include "../Application/NexradSpacialUserSettings.h"
 #include "../UI/ClickableInterface.h"
 #include "../UI/ImGuiController.h"
 #include "../UI/Slate/SlateUI.h"
@@ -202,7 +203,7 @@ void ARadarViewPawn::BeginPlay()
 	}
 	drawingIndicatorMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	drawingIndicatorMesh->SetRelativeScale3D(FVector(0.05f, 0.05f, 0.1f));
-	drawingIndicatorMesh->SetRelativeLocation(FVector(150.0f, 0.0f, 0.0f));
+	drawingIndicatorMesh->SetRelativeLocation(FVector(145.0f, 0.0f, 0.0f));
 	drawingIndicatorMesh->SetRelativeRotation(FRotator(-90.0f, 0.0f, 0.0f));
 	UMaterial* baseMat = LoadObject<UMaterial>(nullptr, TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial"));
 	UMaterialInstanceDynamic* dynMatIndicator = UMaterialInstanceDynamic::Create(baseMat, this);
@@ -294,7 +295,7 @@ void ARadarViewPawn::Tick(float deltaTime)
 			dynamicLaser->SetRelativeLocation(FVector(lDist / 2.0f, 0.0f, 0.0f));
 		}
 		if (drawingIndicatorMesh) {
-			drawingIndicatorMesh->SetRelativeLocation(FVector(lDist, 0.0f, 0.0f));
+			drawingIndicatorMesh->SetRelativeLocation(FVector(lDist - 5.0f, 0.0f, 0.0f));
 		}
 	}
 	
@@ -347,9 +348,25 @@ void ARadarViewPawn::Tick(float deltaTime)
 			// Destroy the disclaimer right here!
 			TArray<AActor*> FoundDirectors;
 			UGameplayStatics::GetAllActorsOfClass(GetWorld(), ADisclaimerDirectorBase::StaticClass(), FoundDirectors);
-			for (AActor* Director : FoundDirectors)
+			if (FoundDirectors.Num() > 0)
 			{
-				Director->Destroy();
+				// We actually clicked to dismiss it, so let's save the setting!
+				FString SlotName = TEXT("NexradSpacialUserSettings");
+				UNexradSpacialUserSettings* Settings = Cast<UNexradSpacialUserSettings>(UGameplayStatics::LoadGameFromSlot(SlotName, 0));
+				if (!Settings)
+				{
+					Settings = Cast<UNexradSpacialUserSettings>(UGameplayStatics::CreateSaveGameObject(UNexradSpacialUserSettings::StaticClass()));
+				}
+				if (Settings)
+				{
+					Settings->bDisclaimerAccepted = true;
+					UGameplayStatics::SaveGameToSlot(Settings, SlotName, 0);
+				}
+
+				for (AActor* Director : FoundDirectors)
+				{
+					Director->Destroy();
+				}
 			}
 
 			if (!widgetInteraction->IsOverInteractableWidget()) {

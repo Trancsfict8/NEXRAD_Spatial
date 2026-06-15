@@ -28,8 +28,8 @@ void URadarColorTableSubsystem::Initialize(FSubsystemCollectionBase& Collection)
         FileManager.MakeDirectory(*VelDir, true);
     }
 
-    ScanAndLoadFolder(ReflDir, ReflectivityTables);
-    ScanAndLoadFolder(VelDir, VelocityTables);
+    ScanAndLoadFolder(ReflDir, ReflectivityTables, false);
+    ScanAndLoadFolder(VelDir, VelocityTables, true);
 }
 
 void URadarColorTableSubsystem::Deinitialize()
@@ -37,7 +37,7 @@ void URadarColorTableSubsystem::Deinitialize()
     Super::Deinitialize();
 }
 
-void URadarColorTableSubsystem::ScanAndLoadFolder(const FString& FolderPath, TMap<FString, FCustomColorTableData>& OutTables)
+void URadarColorTableSubsystem::ScanAndLoadFolder(const FString& FolderPath, TMap<FString, FCustomColorTableData>& OutTables, bool bIsVelocity)
 {
     TArray<FString> Files;
     IFileManager::Get().FindFiles(Files, *(FolderPath + TEXT("*.*")), true, false);
@@ -50,7 +50,7 @@ void URadarColorTableSubsystem::ScanAndLoadFolder(const FString& FolderPath, TMa
         {
             FString FullPath = FolderPath + File;
             FCustomColorTableData TableData;
-            if (ParseColorTableFile(FullPath, TableData))
+            if (ParseColorTableFile(FullPath, TableData, bIsVelocity))
             {
                 FString Name = FPaths::GetBaseFilename(File);
                 OutTables.Add(Name, TableData);
@@ -64,7 +64,7 @@ void URadarColorTableSubsystem::ScanAndLoadFolder(const FString& FolderPath, TMa
     }
 }
 
-bool URadarColorTableSubsystem::ParseColorTableFile(const FString& FilePath, FCustomColorTableData& OutData)
+bool URadarColorTableSubsystem::ParseColorTableFile(const FString& FilePath, FCustomColorTableData& OutData, bool bIsVelocity)
 {
     UE_LOG(LogTemp, Warning, TEXT("RadarColorTableSubsystem: Reading file %s"), *FilePath);
     TArray<FString> Lines;
@@ -173,7 +173,23 @@ bool URadarColorTableSubsystem::ParseColorTableFile(const FString& FilePath, FCu
         OutData.ColorData[i * 4 + 0] = InterpColor.R;
         OutData.ColorData[i * 4 + 1] = InterpColor.G;
         OutData.ColorData[i * 4 + 2] = InterpColor.B;
-        OutData.ColorData[i * 4 + 3] = T * 2.0f; // Standard OpenStorm opacity ramp
+        if (bIsVelocity)
+        {
+            // Velocity: opacity based on distance from center (zero velocity is transparent)
+            float value = (FMath::Abs(i - 8191.5f) / 8191.5f) * 2.0f + 0.1f;
+            OutData.ColorData[i * 4 + 3] = value;
+        }
+        else
+        {
+            OutData.ColorData[i * 4 + 3] = T * 2.0f; // Reflectivity: linear opacity ramp
+        }
+    }
+
+    // For velocity tables, ensure exact-zero velocity pixels are fully transparent
+    if (bIsVelocity)
+    {
+        OutData.ColorData[8191 * 4 + 3] = 0.0f;
+        OutData.ColorData[8192 * 4 + 3] = 0.0f;
     }
 
     OutData.MinValue = MinVal;

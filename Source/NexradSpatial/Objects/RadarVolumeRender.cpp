@@ -661,7 +661,10 @@ void ARadarVolumeRender::Tick(float DeltaTime)
 		colorParams.fromRadarData(radarData);
 
 		bool bIsReflectivity = (radarData->stats.volumeType == RadarData::VOLUME_REFLECTIVITY);
-		bool bIsVelocity = (radarData->stats.volumeType == RadarData::VOLUME_VELOCITY);
+		bool bIsVelocity = (radarData->stats.volumeType == RadarData::VOLUME_VELOCITY
+			|| radarData->stats.volumeType == RadarData::VOLUME_VELOCITY_DEALIASED
+			|| radarData->stats.volumeType == RadarData::VOLUME_STORM_RELATIVE_VELOCITY
+			|| radarData->stats.volumeType == RadarData::VOLUME_ROTATION);
 
 		if (bIsReflectivity && bHasCustomReflectivityTable && cachedCustomReflectivityData.Num() == 16384 * 4)
 		{

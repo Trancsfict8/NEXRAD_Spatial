@@ -56,6 +56,6 @@ public:
     void GetRadarColorTable(bool bIsReflectivity, FString TableName, TArray<float>& OutColorData, float& OutMinValue, float& OutMaxValue, bool& bOutIsValid);
 
 private:
-    void ScanAndLoadFolder(const FString& FolderPath, TMap<FString, FCustomColorTableData>& OutTables);
-    bool ParseColorTableFile(const FString& FilePath, FCustomColorTableData& OutData);
+    void ScanAndLoadFolder(const FString& FolderPath, TMap<FString, FCustomColorTableData>& OutTables, bool bIsVelocity);
+    bool ParseColorTableFile(const FString& FilePath, FCustomColorTableData& OutData, bool bIsVelocity);
 };
