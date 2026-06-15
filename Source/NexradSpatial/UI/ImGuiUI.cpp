@@ -438,7 +438,13 @@ void ImGuiUI::MainUI()
 				
 				ImGui::Separator();
 				ImGui::Checkbox("Show Level 3 Storm Attributes (TVS/Hail)", &globalState.showLevel3StormAttributes);
-				CustomTooltipForPrevious("Toggles the 3D markers for Level 3 severe weather signatures.");
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("Purple Cones = Tornado Vortex Signatures (TVS).\n"
+								   "Spheres = Hail Index indicating probability of severe hail.");
+				
+				ImGui::Checkbox("Show Level 3 Storm Tracks", &globalState.showLevel3StormTracks);
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("Shows projected 60-minute storm tracks (NST) in 3D space.");
 				ImGui::TextWrapped("Level 3 NEXRAD algorithms identify severe storm cells in real-time.\n"
 								   "Cones = Tornado Vortex Signatures (TVS) indicating strong rotation.\n"
 								   "Spheres = Hail Index indicating probability of severe hail.");

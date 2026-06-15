@@ -20,6 +20,7 @@
 #include "../Mapping/Data/ElevationData.h"
 #include "../Mapping/StormAttributeManager.h"
 #include "../Application/GlobalState.h"
+#include "../Application/DisclaimerDirectorBase.h"
 #include "../UI/ClickableInterface.h"
 #include "../UI/ImGuiController.h"
 #include "../UI/Slate/SlateUI.h"
@@ -341,6 +342,15 @@ void ARadarViewPawn::Tick(float deltaTime)
 		if (clickAxis > 0.5f && !bWasClicked) {
 			bWasClicked = true;
 			widgetInteraction->PressPointerKey(EKeys::LeftMouseButton);
+
+			// BULLETPROOF: We know this block executes because the button visually reacts.
+			// Destroy the disclaimer right here!
+			TArray<AActor*> FoundDirectors;
+			UGameplayStatics::GetAllActorsOfClass(GetWorld(), ADisclaimerDirectorBase::StaticClass(), FoundDirectors);
+			for (AActor* Director : FoundDirectors)
+			{
+				Director->Destroy();
+			}
 
 			if (!widgetInteraction->IsOverInteractableWidget()) {
 				if (currentHoveredMarker) {
@@ -1090,7 +1100,7 @@ void ARadarViewPawn::InterrogateSpatialTriggered() {
 	FVector SphereCenter(globe->center.x * globe->scale, globe->center.y * globe->scale, globe->center.z * globe->scale);
 	double SphereRadius = globe->surfaceRadius * globe->scale;
 
-	FVector hitLocation;
+	FVector hitLocation = FVector::ZeroVector;
 	bool bHitMap = false;
 
 	FCollisionQueryParams params;

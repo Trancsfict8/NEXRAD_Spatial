@@ -3,6 +3,7 @@
 #include "Components/ScrollBox.h"
 #include "Kismet/GameplayStatics.h"
 #include "../Application/NexradSpacialUserSettings.h"
+#include "../Application/DisclaimerDirectorBase.h"
 
 void ULegalDisclaimerWidgetBase::NativeConstruct()
 {
@@ -73,6 +74,17 @@ void ULegalDisclaimerWidgetBase::AcceptAndSave()
 		Settings->bDisclaimerAccepted = true;
 		UGameplayStatics::SaveGameToSlot(Settings, SlotName, 0);
 	}
+
+	// Destroy the physical 3D board automatically so no Blueprint logic is needed!
+	TArray<AActor*> FoundDirectors;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ADisclaimerDirectorBase::StaticClass(), FoundDirectors);
+	for (AActor* Director : FoundDirectors)
+	{
+		Director->Destroy();
+	}
+
+	// Just in case destroying the actor fails, forcefully rip the UI off the screen
+	RemoveFromParent();
 
 	OnDisclaimerAccepted();
 }

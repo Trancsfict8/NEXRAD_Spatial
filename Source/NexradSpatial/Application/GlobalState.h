@@ -160,6 +160,7 @@ public:
 	bool showFlashFloodWarnings = true;
 	bool showMarineWarnings = true;
 	bool showLevel3StormAttributes = true;
+	bool showLevel3StormTracks = true;
 	
 	void test(); // test fuction
 	

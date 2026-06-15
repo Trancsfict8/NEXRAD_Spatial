@@ -2,9 +2,8 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Components/WidgetComponent.h"
 #include "DisclaimerDirectorBase.generated.h"
-
-class UWidgetComponent;
 
 UCLASS()
 class NEXRADSPATIAL_API ADisclaimerDirectorBase : public AActor
@@ -21,5 +20,8 @@ protected:
 	UWidgetComponent* DisclaimerWidgetComponent;
 
 	UFUNCTION(BlueprintCallable, Category = "Disclaimer")
-	void CheckDisclaimerStatus(FName MainLevelName);
+	void CheckDisclaimerStatus();
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Disclaimer")
+	void OnDisclaimerAlreadyAccepted();
 };

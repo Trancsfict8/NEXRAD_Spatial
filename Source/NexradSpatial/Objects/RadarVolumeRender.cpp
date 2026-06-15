@@ -315,12 +315,16 @@ void ARadarVolumeRender::BeginPlay()
 	{
 		if (URadarColorTableSubsystem* ColorSubsystem = GI->GetSubsystem<URadarColorTableSubsystem>())
 		{
-			// Try reflectivity first
-			ColorSubsystem->GetRadarColorTable(true, TEXT(""), cachedCustomColorData, cachedCustomMin, cachedCustomMax, bHasCustomColorTable);
-			if (bHasCustomColorTable)
+			ColorSubsystem->GetRadarColorTable(true, TEXT(""), cachedCustomReflectivityData, cachedCustomReflectivityMin, cachedCustomReflectivityMax, bHasCustomReflectivityTable);
+			if (bHasCustomReflectivityTable)
 			{
-				bCustomTableIsReflectivity = true;
-				UE_LOG(LogTemp, Warning, TEXT("RadarVolumeRender: Cached custom REFLECTIVITY color table. Min: %f, Max: %f, DataSize: %d"), cachedCustomMin, cachedCustomMax, cachedCustomColorData.Num());
+				UE_LOG(LogTemp, Warning, TEXT("RadarVolumeRender: Cached custom REFLECTIVITY color table. Min: %f, Max: %f, DataSize: %d"), cachedCustomReflectivityMin, cachedCustomReflectivityMax, cachedCustomReflectivityData.Num());
+			}
+
+			ColorSubsystem->GetRadarColorTable(false, TEXT(""), cachedCustomVelocityData, cachedCustomVelocityMin, cachedCustomVelocityMax, bHasCustomVelocityTable);
+			if (bHasCustomVelocityTable)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("RadarVolumeRender: Cached custom VELOCITY color table. Min: %f, Max: %f, DataSize: %d"), cachedCustomVelocityMin, cachedCustomVelocityMax, cachedCustomVelocityData.Num());
 			}
 		}
 	}
@@ -656,20 +660,22 @@ void ARadarVolumeRender::Tick(float DeltaTime)
 		RadarColorIndex::Params colorParams = {};
 		colorParams.fromRadarData(radarData);
 
-		if (bHasCustomColorTable && cachedCustomColorData.Num() == 16384 * 4)
+		bool bIsReflectivity = (radarData->stats.volumeType == RadarData::VOLUME_REFLECTIVITY);
+		bool bIsVelocity = (radarData->stats.volumeType == RadarData::VOLUME_VELOCITY);
+
+		if (bIsReflectivity && bHasCustomReflectivityTable && cachedCustomReflectivityData.Num() == 16384 * 4)
 		{
-			bool bIsReflectivity = (radarData->stats.volumeType == RadarData::VOLUME_REFLECTIVITY);
-			if (bIsReflectivity && bCustomTableIsReflectivity)
-			{
-				radarColorResult = radarColor->GenerateColorIndex(colorParams, &radarColorResult);
-				radarColorResult.lower = cachedCustomMin;
-				radarColorResult.upper = cachedCustomMax;
-				FMemory::Memcpy(radarColorResult.data, cachedCustomColorData.GetData(), cachedCustomColorData.Num() * sizeof(float));
-			}
-			else
-			{
-				radarColorResult = radarColor->GenerateColorIndex(colorParams, &radarColorResult);
-			}
+			radarColorResult = radarColor->GenerateColorIndex(colorParams, &radarColorResult);
+			radarColorResult.lower = cachedCustomReflectivityMin;
+			radarColorResult.upper = cachedCustomReflectivityMax;
+			FMemory::Memcpy(radarColorResult.data, cachedCustomReflectivityData.GetData(), cachedCustomReflectivityData.Num() * sizeof(float));
+		}
+		else if (bIsVelocity && bHasCustomVelocityTable && cachedCustomVelocityData.Num() == 16384 * 4)
+		{
+			radarColorResult = radarColor->GenerateColorIndex(colorParams, &radarColorResult);
+			radarColorResult.lower = cachedCustomVelocityMin;
+			radarColorResult.upper = cachedCustomVelocityMax;
+			FMemory::Memcpy(radarColorResult.data, cachedCustomVelocityData.GetData(), cachedCustomVelocityData.Num() * sizeof(float));
 		}
 		else
 		{

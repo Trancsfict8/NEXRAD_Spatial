@@ -427,6 +427,20 @@ TSharedRef<SWidget> SVRMenuWidget::BuildRadarTab()
 			.AutoWrapText(true)
 			.ColorAndOpacity(FSlateColor(FLinearColor(0.8f, 0.8f, 0.8f)))
 		]
+		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
+		[
+			MakeCheckbox(TEXT("Show Level 3 Storm Tracks"), 
+				[this]() { return GetGlobalState() && GetGlobalState()->showLevel3StormTracks; }, 
+				[this](bool v) { if (GetGlobalState()) GetGlobalState()->showLevel3StormTracks = v; })
+		]
+		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(8,0,0,8))
+		[
+			SNew(STextBlock)
+			.Text(FText::FromString(TEXT("Level 3 storm tracking (NST):\nShows projected 60-minute storm tracks in 3D space.")))
+			.Font(LabelFont())
+			.AutoWrapText(true)
+			.ColorAndOpacity(FSlateColor(FLinearColor(0.8f, 0.8f, 0.8f)))
+		]
 		+ SVerticalBox::Slot().AutoHeight()[ MakeLabel(TEXT("View Mode")) ]
 		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
 		[

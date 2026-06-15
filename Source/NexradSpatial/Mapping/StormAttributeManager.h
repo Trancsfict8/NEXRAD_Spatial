@@ -42,6 +42,12 @@ private:
     UPROPERTY(VisibleAnywhere)
     UInstancedStaticMeshComponent* HailLargeMeshComponent;
 
+    UPROPERTY(VisibleAnywhere)
+    UInstancedStaticMeshComponent* TrackMeshComponent;
+
+    UPROPERTY(VisibleAnywhere)
+    UInstancedStaticMeshComponent* TrackMarkerMeshComponent;
+
     Globe* globe = nullptr;
     float lastFetchTime = 0;
     float fetchInterval = 60.0f; // Fetch every 60 seconds
@@ -53,6 +59,9 @@ private:
         float lat;
         float lon;
         float maxSize;
+        float drct;
+        float sknt;
+        FString storm_id;
     };
     
     TArray<FStormAttr> currentAttributes;

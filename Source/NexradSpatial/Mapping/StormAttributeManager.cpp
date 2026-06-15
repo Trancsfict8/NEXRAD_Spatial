@@ -31,6 +31,12 @@ AStormAttributeManager::AStormAttributeManager()
     HailLargeMeshComponent = CreateDefaultSubobject<UInstancedStaticMeshComponent>(TEXT("HailLargeMeshComponent"));
     HailLargeMeshComponent->SetupAttachment(RootComponent);
 
+    TrackMeshComponent = CreateDefaultSubobject<UInstancedStaticMeshComponent>(TEXT("TrackMeshComponent"));
+    TrackMeshComponent->SetupAttachment(RootComponent);
+
+    TrackMarkerMeshComponent = CreateDefaultSubobject<UInstancedStaticMeshComponent>(TEXT("TrackMarkerMeshComponent"));
+    TrackMarkerMeshComponent->SetupAttachment(RootComponent);
+
     // Setup some default basic shapes (User can change these to actual nice icons later)
     static ConstructorHelpers::FObjectFinder<UStaticMesh> ConeMesh(TEXT("StaticMesh'/Engine/BasicShapes/Cone.Cone'"));
     if (ConeMesh.Succeeded()) TvsMeshComponent->SetStaticMesh(ConeMesh.Object);
@@ -40,7 +46,11 @@ AStormAttributeManager::AStormAttributeManager()
         HailSmallMeshComponent->SetStaticMesh(SphereMesh.Object);
         HailMediumMeshComponent->SetStaticMesh(SphereMesh.Object);
         HailLargeMeshComponent->SetStaticMesh(SphereMesh.Object);
+        TrackMarkerMeshComponent->SetStaticMesh(SphereMesh.Object);
     }
+
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> CylinderMesh(TEXT("StaticMesh'/Engine/BasicShapes/Cylinder.Cylinder'"));
+    if (CylinderMesh.Succeeded()) TrackMeshComponent->SetStaticMesh(CylinderMesh.Object);
 
     // Initial scale for visualization is applied per-instance in UpdateMeshes
 }
@@ -66,6 +76,14 @@ void AStormAttributeManager::BeginPlay()
         UMaterialInstanceDynamic* dynHailLarge = UMaterialInstanceDynamic::Create(baseMat, this);
         dynHailLarge->SetVectorParameterValue(TEXT("Color"), FLinearColor(1.0f, 0.0f, 0.0f, 1.0f));
         HailLargeMeshComponent->SetMaterial(0, dynHailLarge);
+
+        UMaterialInstanceDynamic* dynTrack = UMaterialInstanceDynamic::Create(baseMat, this);
+        dynTrack->SetVectorParameterValue(TEXT("Color"), FLinearColor(1.0f, 1.0f, 1.0f, 1.0f));
+        TrackMeshComponent->SetMaterial(0, dynTrack);
+
+        UMaterialInstanceDynamic* dynTrackMarker = UMaterialInstanceDynamic::Create(baseMat, this);
+        dynTrackMarker->SetVectorParameterValue(TEXT("Color"), FLinearColor(1.0f, 1.0f, 1.0f, 1.0f));
+        TrackMarkerMeshComponent->SetMaterial(0, dynTrackMarker);
     }
     
     TextMaterial = LoadObject<UMaterial>(nullptr, TEXT("/Game/Materials/UnlitColorText.UnlitColorText"));
@@ -92,11 +110,15 @@ void AStormAttributeManager::Tick(float DeltaTime)
         globalState = &GetWorld()->GetGameState<ARadarGameStateBase>()->globalState;
     }
     
-    if (!globalState || !globalState->downloadData) {
+    bool wantsAny = globalState->showLevel3StormAttributes || globalState->showLevel3StormTracks;
+
+    if (!globalState || !globalState->downloadData || !wantsAny) {
         TvsMeshComponent->ClearInstances();
         HailSmallMeshComponent->ClearInstances();
         HailMediumMeshComponent->ClearInstances();
         HailLargeMeshComponent->ClearInstances();
+        TrackMeshComponent->ClearInstances();
+        TrackMarkerMeshComponent->ClearInstances();
         HideAllText();
         currentAttributes.Empty();
         return;
@@ -113,15 +135,8 @@ void AStormAttributeManager::Tick(float DeltaTime)
         lastFetchTime = fetchInterval; // force fetch immediately on site change
     }
     
-    if (!globalState->showLevel3StormAttributes) {
-        TvsMeshComponent->ClearInstances();
-        HailSmallMeshComponent->ClearInstances();
-        HailMediumMeshComponent->ClearInstances();
-        HailLargeMeshComponent->ClearInstances();
-        HideAllText();
-        lastFetchTime = fetchInterval; // force fetch immediately when toggled back on
-        return;
-    }
+    // Global attribute toggling is handled in UpdateMeshes to allow dynamic updates
+    // without refetching data constantly when toggling specific layers.
     
     lastFetchTime += DeltaTime;
     if (lastFetchTime > fetchInterval) {
@@ -185,8 +200,14 @@ void AStormAttributeManager::OnAttributesFetched(FHttpRequestPtr Request, FHttpR
 
                 FString tvs = PropsObj->GetStringField(TEXT("tvs"));
                 float poh = PropsObj->GetNumberField(TEXT("poh"));
+                float drct = PropsObj->GetNumberField(TEXT("drct"));
+                float sknt = PropsObj->GetNumberField(TEXT("sknt"));
                 
-                if (tvs == TEXT("NONE") && poh < 50.0f) continue; // Not a TVS, and low hail prob
+                bool isTVS = (tvs != TEXT("NONE"));
+                bool isHail = (poh >= 50.0f);
+                bool hasTrack = (sknt > 0);
+
+                if (!isTVS && !isHail && !hasTrack) continue;
 
                 const TArray<TSharedPtr<FJsonValue>>* Coords;
                 if (GeomObj->TryGetArrayField(TEXT("coordinates"), Coords) && Coords->Num() >= 2)
@@ -195,16 +216,23 @@ void AStormAttributeManager::OnAttributesFetched(FHttpRequestPtr Request, FHttpR
                     attr.lon = (*Coords)[0]->AsNumber();
                     attr.lat = (*Coords)[1]->AsNumber();
                     attr.maxSize = PropsObj->GetNumberField(TEXT("max_size"));
+                    attr.drct = drct;
+                    attr.sknt = sknt;
+                    attr.storm_id = PropsObj->GetStringField(TEXT("storm_id"));
                     
-                    if (tvs != TEXT("NONE")) {
+                    if (isTVS) {
                         attr.type = TEXT("TVS");
                         newAttrs.Add(attr);
                     } 
-                    // Only show hail if probability is high AND the estimated size is at least 0.25 inches
-                    if (poh >= 50.0f && attr.maxSize >= 0.25f) {
+                    if (isHail && attr.maxSize >= 0.25f) {
                         FStormAttr hailAttr = attr;
                         hailAttr.type = TEXT("HAIL");
                         newAttrs.Add(hailAttr);
+                    }
+                    if (hasTrack) {
+                        FStormAttr trackAttr = attr;
+                        trackAttr.type = TEXT("TRACK");
+                        newAttrs.Add(trackAttr);
                     }
                 }
             }
@@ -227,6 +255,8 @@ void AStormAttributeManager::UpdateMeshes()
     HailSmallMeshComponent->ClearInstances();
     HailMediumMeshComponent->ClearInstances();
     HailLargeMeshComponent->ClearInstances();
+    TrackMeshComponent->ClearInstances();
+    TrackMarkerMeshComponent->ClearInstances();
     HideAllText();
 
     GlobalState* globalState = &GetWorld()->GetGameState<ARadarGameStateBase>()->globalState;
@@ -244,20 +274,17 @@ void AStormAttributeManager::UpdateMeshes()
     int textIndex = 0;
     
     for (const FStormAttr& attr : currentAttributes) {
-        if (attr.type == TEXT("TVS")) {
+        if (attr.type == TEXT("TVS") && globalState->showLevel3StormAttributes) {
             // Position TVS higher so it hovers above any hail sphere
             SimpleVector3<double> loc = globalState->globe->GetPointScaledDegrees(attr.lat, attr.lon, 15000 * globalState->elevationExaggeration);
             FTransform transform;
             transform.SetLocation(FVector(loc.x, loc.y, loc.z));
             
-            // Point the cone downwards by flipping pitch, and stretch it slightly
-            // Using FQuat to set rotation properly. In VR map, downward relative to globe requires orienting to globe center.
-            // Since basic shapes might just point Z up, we can invert pitch/roll or just scale Z by -1
             transform.SetRotation(FQuat(FRotator(180.0f, 0.0f, 0.0f)));
             transform.SetScale3D(FVector(0.5f, 0.5f, 0.8f)); 
             
             TvsMeshComponent->AddInstance(transform);
-        } else {
+        } else if (attr.type == TEXT("HAIL") && globalState->showLevel3StormAttributes) {
             // HAIL
             // Position 40k feet high (12192 meters) so it's above the storm cells
             SimpleVector3<double> loc = globalState->globe->GetPointScaledDegrees(attr.lat, attr.lon, 12192 * globalState->elevationExaggeration);
@@ -300,6 +327,52 @@ void AStormAttributeManager::UpdateMeshes()
             }
             
             textIndex++;
+        } else if (attr.type == TEXT("TRACK") && globalState->showLevel3StormTracks) {
+            double headingDeg = attr.drct + 180.0; // direction it's heading
+            double headingRad = FMath::DegreesToRadians(headingDeg);
+            double distanceKmPerHour = attr.sknt * 1.852;
+            double earthRadiusKm = 6371.0;
+            
+            // Draw 4 segments for 15, 30, 45, 60 minutes
+            for (int step = 0; step < 4; step++) {
+                double startDistKm = distanceKmPerHour * (step * 0.25);
+                double endDistKm = distanceKmPerHour * ((step + 1) * 0.25);
+                
+                double startLat = attr.lat + (startDistKm * cos(headingRad) / earthRadiusKm) * (180.0 / PI);
+                double startLon = attr.lon + (startDistKm * sin(headingRad) / (earthRadiusKm * cos(FMath::DegreesToRadians(attr.lat)))) * (180.0 / PI);
+                
+                double endLat = attr.lat + (endDistKm * cos(headingRad) / earthRadiusKm) * (180.0 / PI);
+                double endLon = attr.lon + (endDistKm * sin(headingRad) / (earthRadiusKm * cos(FMath::DegreesToRadians(attr.lat)))) * (180.0 / PI);
+                
+                // 9000 ft = 2743.2 meters AGL (3 times higher)
+                SimpleVector3<double> locStart = globalState->globe->GetPointScaledDegrees(startLat, startLon, 2743.2 * globalState->elevationExaggeration);
+                SimpleVector3<double> locEnd = globalState->globe->GetPointScaledDegrees(endLat, endLon, 2743.2 * globalState->elevationExaggeration);
+                
+                FVector StartVec(locStart.x, locStart.y, locStart.z);
+                FVector EndVec(locEnd.x, locEnd.y, locEnd.z);
+                
+                FVector Delta = EndVec - StartVec;
+                float Length = Delta.Size();
+                if (Length < 0.1f) continue;
+                
+                FTransform transform;
+                transform.SetLocation(StartVec + Delta * 0.5f);
+                
+                FRotator Rot = Delta.Rotation();
+                Rot.Pitch -= 90.0f; // Align cylinder Z to face along X (forward)
+                transform.SetRotation(Rot.Quaternion());
+                
+                // Half as thick
+                transform.SetScale3D(FVector(0.025f, 0.025f, Length / 100.0f));
+                
+                TrackMeshComponent->AddInstance(transform);
+
+                // Add marker
+                FTransform markerTransform;
+                markerTransform.SetLocation(EndVec);
+                markerTransform.SetScale3D(FVector(0.1f)); // Slightly wider than the line (0.1 scale vs 0.025)
+                TrackMarkerMeshComponent->AddInstance(markerTransform);
+            }
         }
     }
 }
