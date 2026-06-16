@@ -135,8 +135,12 @@ void AGISPolyline::DisplayObject(GISObject* object, GISGroup* group){
 	}
 	
 	if(triangles.Num() > 0){
+		if (bIsWarning) {
+			WarningLocalVertices = vertices;
+		}
 		proceduralMesh->CreateMeshSection(0, vertices, triangles, normals, uv0, TArray<FColor>(), TArray<FProcMeshTangent>(), false);
 		// proceduralMesh->SetMaterial(0, materialInstance);
+		BaseColor = FLinearColor(group->colorR, group->colorG, group->colorB, 1.0f);
 		materialInstance->SetVectorParameterValue(TEXT("Color"), FVector4(group->colorR,group->colorG,group->colorB,1));
 	}
 }
@@ -149,4 +153,20 @@ void AGISPolyline::PositionObject(Globe* globe){
 
 void AGISPolyline::SetBrightness(float brightness){
 	materialInstance->SetScalarParameterValue(TEXT("Brightness"), brightness);
+}
+
+void AGISPolyline::SetHovered(bool bHovered){
+	if (bHovered) {
+		SetBrightness(2.5f);
+		if (bIsWarning && materialInstance) {
+			// Make the line white or brighter to indicate it is hovered
+			materialInstance->SetVectorParameterValue(TEXT("Color"), FVector4(1.0f, 1.0f, 1.0f, 1.0f));
+		}
+	} else {
+		SetBrightness(1.0f);
+		if (bIsWarning && materialInstance) {
+			// Restore original color
+			materialInstance->SetVectorParameterValue(TEXT("Color"), FVector4(BaseColor.R, BaseColor.G, BaseColor.B, 1.0f));
+		}
+	}
 }

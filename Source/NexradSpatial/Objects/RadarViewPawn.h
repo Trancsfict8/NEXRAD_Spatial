@@ -67,6 +67,7 @@ public:
 	SimpleVector3<float> currentLatLon = {0,0,0};
 	
 	class ALocationMarker* lastHoveredMarker = nullptr;
+	class AGISPolyline* lastHoveredPolyline = nullptr;
 	std::string lastSiteId = "";
 	
 	std::vector<uint64_t> callbackIds = {};
@@ -174,6 +175,9 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "VR")
 	UWidgetComponent* vrMenuWidget;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "VR")
+	UWidgetComponent* warningPopupWidget;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "VR")
 	UWidgetInteractionComponent* widgetInteraction;

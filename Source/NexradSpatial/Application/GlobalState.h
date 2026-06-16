@@ -161,6 +161,8 @@ public:
 	bool showMarineWarnings = true;
 	bool showLevel3StormAttributes = true;
 	bool showLevel3StormTracks = true;
+	bool showWarningPopup = false;
+	std::string warningPopupText = "";
 	
 	void test(); // test fuction
 	

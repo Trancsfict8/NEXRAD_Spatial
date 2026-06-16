@@ -100,9 +100,44 @@ void AWarningManager::Tick(float DeltaTime)
 			
 			if (shouldShow && !obj->shown) {
 				AGISPolyline* line = GetWorld()->SpawnActor<AGISPolyline>(AGISPolyline::StaticClass());
+				if (warningTexts.count(obj)) {
+					line->WarningText = warningTexts[obj];
+					line->bIsWarning = true;
+				}
 				line->DisplayObject(obj, group);
 				line->PositionObject(globe);
 				line->SetBrightness(1.0f);
+				
+				// Compute world-space center for geometric hit testing
+				if (line->bIsWarning && obj->geometryCount >= 2) {
+					// Find centroid of polygon geometry
+					float sumLat = 0, sumLon = 0;
+					int pointCount = 0;
+					float minLat = 999, maxLat = -999, minLon = 999, maxLon = -999;
+					for (uint32_t g = 0; g < obj->geometryCount - 1; g += 2) {
+						if (std::isfinite(obj->geometry[g])) {
+							float lat = obj->geometry[g];
+							float lon = obj->geometry[g + 1];
+							sumLat += lat;
+							sumLon += lon;
+							if (lat < minLat) minLat = lat;
+							if (lat > maxLat) maxLat = lat;
+							if (lon < minLon) minLon = lon;
+							if (lon > maxLon) maxLon = lon;
+							pointCount++;
+						}
+					}
+					if (pointCount > 0) {
+						sumLat /= pointCount;
+						sumLon /= pointCount;
+						// We MUST use the dummy globe here because AGISPolyline constructs its mesh using a default unrotated globe.
+						// PositionObject() then handles translating/rotating the entire actor into world space.
+						Globe localDummyGlobe = {};
+						SimpleVector3<> centerPt = localDummyGlobe.GetPointScaledDegrees(sumLat, sumLon, 1000);
+						line->WarningLocalCenter = FVector(centerPt.x, centerPt.y, centerPt.z);
+					}
+				}
+				
 				polylines[i] = line;
 				obj->shown = true;
 			} else if (!shouldShow && obj->shown) {
@@ -150,6 +185,7 @@ void AWarningManager::OnWarningsFetched(FHttpRequestPtr Request, FHttpResponsePt
 			delete obj;
 		}
 		warningObjects.clear();
+		warningTexts.clear();
 		
 		const TArray<TSharedPtr<FJsonValue>>* features;
 		if (jsonObject->TryGetArrayField(TEXT("features"), features)) {
@@ -204,6 +240,14 @@ void AWarningManager::OnWarningsFetched(FHttpRequestPtr Request, FHttpResponsePt
 								SimpleVector3<double> loc = dummyGlobe.GetPointDegrees(sumLat, sumLon, 0);
 								obj->location = SimpleVector3<float>(loc.x, loc.y, loc.z);
 							}
+							
+							FString headline = "";
+							properties->TryGetStringField(TEXT("headline"), headline);
+							
+							FString description = "";
+							properties->TryGetStringField(TEXT("description"), description);
+							
+							warningTexts[obj] = headline + TEXT("\n\n") + description;
 							
 							warningObjects.push_back(obj);
 						}

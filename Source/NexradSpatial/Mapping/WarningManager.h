@@ -31,6 +31,7 @@ public:
 	void OnWarningsFetched(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful);
 
 	std::vector<GISObject*> warningObjects;
+	std::map<GISObject*, FString> warningTexts;
 	std::map<uint64_t, AGISPolyline*> polylines;
 
 	GISGroup tornadoGroup;

@@ -1079,6 +1079,18 @@ void ImGuiUI::MainUI()
 	}
 	ImGui::End();
 	
+	if (globalState.showWarningPopup) {
+		ImVec2 center(ImGui::GetIO().DisplaySize.x * 0.5f, ImGui::GetIO().DisplaySize.y * 0.5f);
+		ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+		ImGui::SetNextWindowSizeConstraints(ImVec2(300, 200), ImVec2(800, 600));
+		if (ImGui::Begin("Warning Details", &globalState.showWarningPopup)) {
+			ImGui::TextWrapped("%s", globalState.warningPopupText.c_str());
+			if (ImGui::Button("Close")) {
+				globalState.showWarningPopup = false;
+			}
+		}
+		ImGui::End();
+	}
 	
 	if(showDemoWindow){
 		ImGui:: ShowDemoWindow();

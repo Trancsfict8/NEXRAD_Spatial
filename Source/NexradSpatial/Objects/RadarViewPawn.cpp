@@ -9,6 +9,8 @@
 #include "Engine/StaticMesh.h" 
 #include "Engine/World.h"
 #include "Engine/Engine.h"
+#include "EngineUtils.h"
+#include "DrawDebugHelpers.h"
 #include "Materials/Material.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "../Radar/SimpleVector3.h"
@@ -26,6 +28,13 @@
 #include "../UI/ImGuiController.h"
 #include "../UI/Slate/SlateUI.h"
 #include "../UI/Slate/SVRMenuWidget.h"
+#include "Widgets/Text/STextBlock.h"
+#include "Widgets/Layout/SBorder.h"
+#include "Widgets/Layout/SBox.h"
+#include "Widgets/Input/SButton.h"
+#include "Widgets/SBoxPanel.h"
+#include "Widgets/Layout/SScrollBox.h"
+#include "Brushes/SlateColorBrush.h"
 #include "../EngineHelpers/StringUtils.h"
 #include "Engine/Engine.h"
 #include "MotionControllerComponent.h"
@@ -42,6 +51,9 @@
 #include "Interfaces/IHttpResponse.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
+#include "../Mapping/GISPolyline.h"
+#include <cmath>
+#include <string>
 
 #include "Async/Async.h"
 #include "Engine/LocalPlayer.h"
@@ -115,6 +127,16 @@ void ARadarViewPawn::BeginPlay()
 	vrMenuWidget->SetTickWhenOffscreen(true);
 	vrMenuWidget->SetWindowFocusable(true);
 	vrMenuWidget->SetSlateWidget(SNew(SVRMenuWidget));
+
+	// Warning Popup panel
+	warningPopupWidget = NewObject<UWidgetComponent>(this, TEXT("WarningPopupWidget_Dyn"));
+	warningPopupWidget->SetupAttachment(RootComponent);
+	warningPopupWidget->RegisterComponent();
+	warningPopupWidget->SetDrawSize(FVector2D(800, 600));
+	warningPopupWidget->SetRelativeScale3D(FVector(0.12f, 0.12f, 0.12f));
+	warningPopupWidget->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	warningPopupWidget->SetTwoSided(true);
+	warningPopupWidget->SetVisibility(false);
 
 	// Laser pointer
 	widgetInteraction = NewObject<UWidgetInteractionComponent>(this, TEXT("WidgetInteraction_Dyn"));
@@ -318,6 +340,7 @@ void ARadarViewPawn::Tick(float deltaTime)
 	if (widgetInteraction) {
 		
 		ALocationMarker* currentHoveredMarker = nullptr;
+		AGISPolyline* currentHoveredPolyline = nullptr;
 		
 		if (!widgetInteraction->IsOverInteractableWidget() && !globalState->enableDrawingTool) {
 			FHitResult hitResult;
@@ -325,12 +348,48 @@ void ARadarViewPawn::Tick(float deltaTime)
 			FVector end = start + (widgetInteraction->GetForwardVector() * 100000.0f);
 			FCollisionQueryParams queryParams;
 			queryParams.AddIgnoredActor(this);
+			queryParams.bTraceComplex = true;
 			
 			if (GetWorld()->LineTraceSingleByChannel(hitResult, start, end, ECC_Camera, queryParams)) {
 				AActor* hitActor = hitResult.GetActor();
 				if (hitActor) {
 					currentHoveredMarker = Cast<ALocationMarker>(hitActor);
+					currentHoveredPolyline = Cast<AGISPolyline>(hitActor);
 				}
+			}
+			
+			// Geometric hit test for warning polygons to make them extremely reliable to click
+			if (!currentHoveredPolyline) {
+				float closestDist = 999999.0f;
+				AGISPolyline* closestPolyline = nullptr;
+				for (TActorIterator<AGISPolyline> It(GetWorld()); It; ++It) {
+					AGISPolyline* polyline = *It;
+					if (polyline->bIsWarning && polyline->WarningLocalVertices.Num() > 0) {
+						FTransform polyTransform = polyline->GetActorTransform();
+						
+						float minVertexDist = 999999.0f;
+						FVector closestVertex;
+						
+						// Test every vertex in the boundary to see if the ray comes close to it
+						// We use a step size of 4 to save performance (checking every 4th vertex is plenty for click detection)
+						for (int i = 0; i < polyline->WarningLocalVertices.Num(); i += 4) {
+							FVector worldVertex = polyTransform.TransformPosition(polyline->WarningLocalVertices[i]);
+							FVector closestPointOnRay = FMath::ClosestPointOnSegment(worldVertex, start, end);
+							float dist = FVector::Dist(closestPointOnRay, worldVertex);
+							if (dist < minVertexDist) {
+								minVertexDist = dist;
+								closestVertex = worldVertex;
+							}
+						}
+						
+						// Hit target reduced by 1/3 (approx 16km)
+						if (minVertexDist <= 166.0f && minVertexDist < closestDist) {
+							closestDist = minVertexDist;
+							closestPolyline = polyline;
+						}
+					}
+				}
+				currentHoveredPolyline = closestPolyline;
 			}
 		}
 		
@@ -339,13 +398,29 @@ void ARadarViewPawn::Tick(float deltaTime)
 			if (currentHoveredMarker) currentHoveredMarker->SetHovered(true);
 			lastHoveredMarker = currentHoveredMarker;
 		}
+		
+		if (lastHoveredPolyline != currentHoveredPolyline) {
+			if (lastHoveredPolyline) lastHoveredPolyline->SetHovered(false);
+			if (currentHoveredPolyline && currentHoveredPolyline->bIsWarning) currentHoveredPolyline->SetHovered(true);
+			lastHoveredPolyline = currentHoveredPolyline;
+		}
 
 		if (clickAxis > 0.5f && !bWasClicked) {
 			bWasClicked = true;
 			widgetInteraction->PressPointerKey(EKeys::LeftMouseButton);
 
-			// BULLETPROOF: We know this block executes because the button visually reacts.
-			// Destroy the disclaimer right here!
+			// Always try to close the popup if we clicked a marker, even if widget interaction hit something transparent
+			if (currentHoveredMarker) {
+				currentHoveredMarker->OnClick();
+				globalState->showWarningPopup = false;
+				warningPopupWidget->SetVisibility(false);
+			}
+
+			// Force-close the window if the laser misses everything and hits nothing interactable
+			if (!widgetInteraction->IsOverInteractableWidget() && !currentHoveredMarker && !currentHoveredPolyline) {
+				warningPopupWidget->SetVisibility(false);
+				globalState->showWarningPopup = false;
+			}
 			TArray<AActor*> FoundDirectors;
 			UGameplayStatics::GetAllActorsOfClass(GetWorld(), ADisclaimerDirectorBase::StaticClass(), FoundDirectors);
 			if (FoundDirectors.Num() > 0)
@@ -372,6 +447,93 @@ void ARadarViewPawn::Tick(float deltaTime)
 			if (!widgetInteraction->IsOverInteractableWidget()) {
 				if (currentHoveredMarker) {
 					currentHoveredMarker->OnClick();
+					globalState->showWarningPopup = false;
+					warningPopupWidget->SetVisibility(false);
+				}
+				
+				AGISPolyline* polylineToClick = currentHoveredPolyline;
+				
+				// VR JITTER FIX: If the user clicked but slightly missed the line, do a fat "forgiving" hit test
+				if (!polylineToClick) {
+					float bestDist = 999999.0f;
+					FVector startRay = widgetInteraction->GetComponentLocation();
+					FVector endRay = startRay + (widgetInteraction->GetForwardVector() * 100000.0f);
+					for (TActorIterator<AGISPolyline> It(GetWorld()); It; ++It) {
+						AGISPolyline* polyline = *It;
+						if (polyline->bIsWarning && polyline->WarningLocalVertices.Num() > 0) {
+							FTransform polyTransform = polyline->GetActorTransform();
+							for (int i = 0; i < polyline->WarningLocalVertices.Num(); i += 4) {
+								FVector worldVertex = polyTransform.TransformPosition(polyline->WarningLocalVertices[i]);
+								FVector closestPointOnRay = FMath::ClosestPointOnSegment(worldVertex, startRay, endRay);
+								float dist = FVector::Dist(closestPointOnRay, worldVertex);
+								// Hit target reduced by 1/3
+								if (dist <= 333.0f && dist < bestDist) {
+									bestDist = dist;
+									polylineToClick = polyline;
+								}
+							}
+						}
+					}
+				}
+				
+				if (polylineToClick && polylineToClick->bIsWarning) {
+					// Vibrate the controller so the user knows they successfully clicked it!
+					if (APlayerController* PC = Cast<APlayerController>(GetController())) {
+						PC->PlayDynamicForceFeedback(1.0f, 0.2f, true, true, true, true);
+					}
+					
+					globalState->showWarningPopup = true;
+					globalState->warningPopupText = std::string(TCHAR_TO_UTF8(*polylineToClick->WarningText));
+
+					// Display the text inside the VR 3D world!
+					FString textStr = *polylineToClick->WarningText;
+					warningPopupWidget->SetSlateWidget(
+						SNew(SBorder)
+						.BorderImage(new FSlateColorBrush(FLinearColor(0.0f, 0.0f, 0.0f, 0.85f)))
+						.Padding(FMargin(30.0f))
+						[
+							SNew(SVerticalBox)
+							+ SVerticalBox::Slot()
+							.FillHeight(1.0f)
+							[
+								SNew(SBox)
+								.WidthOverride(1200.0f)
+								[
+									SNew(SScrollBox)
+									+ SScrollBox::Slot()
+									[
+										SNew(STextBlock)
+										.Text(FText::FromString(textStr))
+										.AutoWrapText(true)
+										.ColorAndOpacity(FLinearColor::White)
+									]
+								]
+							]
+							+ SVerticalBox::Slot()
+							.AutoHeight()
+							.Padding(0, 20.0f, 0, 0)
+							.HAlign(HAlign_Center)
+							[
+								SNew(SButton)
+								.Text(FText::FromString("Close Warning"))
+								.ContentPadding(FMargin(40.0f, 20.0f)) // Massive button padding to make it easy to click in VR
+								.OnClicked_Lambda([this]() {
+									warningPopupWidget->SetVisibility(false);
+									if(ARadarGameStateBase* GS = GetWorld()->GetGameState<ARadarGameStateBase>()) {
+										GS->globalState.showWarningPopup = false;
+									}
+									return FReply::Handled();
+								})
+							]
+						]
+					);
+					// Place it right in front of the user's face (camera) at a comfortable 1.5 meter reading distance
+					FVector spawnLoc = camera->GetComponentLocation() + (camera->GetForwardVector() * 150.0f);
+					warningPopupWidget->SetWorldLocation(spawnLoc);
+					// Make it perfectly face the camera
+					FRotator lookAt = FRotationMatrix::MakeFromX(camera->GetComponentLocation() - spawnLoc).Rotator();
+					warningPopupWidget->SetWorldRotation(lookAt);
+					warningPopupWidget->SetVisibility(true);
 				}
 			}
 
