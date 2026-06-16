@@ -1,11 +1,16 @@
 # Nexrad Spatial
 
+![Nexrad Spatial Logo](NexradSpatial.png)
+
 Nexrad Spatial is an immersive, fully 3D volumetric weather radar and data visualization application built on top of Unreal Engine 5.7. It allows you to step inside extreme weather events, view raw radar sweeps from across the globe in breathtaking 3D detail, and analyze live atmospheric data dynamically in Virtual Reality.
+
+For more information, visit our website at [NexradSpatial.com](https://NexradSpatial.com) or join the community on the [Nexrad Spatial Discord Server](https://discord.gg/nexradspatial).
 
 This project is a heavily expanded derivative work of the open-source **OpenStorm Radar** project (originally developed by Jordan Schlick). It utilizes the powerful underlying volumetric rendering algorithms and data decoders of OpenStorm, while introducing a suite of specialized spatial computing features, real-time alerting, and an upgraded immersive user experience.
 
 ## Demo Video
-[![OpenStorm Demo](docs/img/OpenStorm2.jpg)](https://www.youtube.com/watch?v=9j1-sNnDQwY "OpenStorm Demo")
+
+*[Demo video coming soon]*
 
 ## Features
 ### Core Features (Inherited from OpenStorm)
@@ -52,6 +57,14 @@ Key paths include:
 ## Architecture & Contributions
 Nexrad Spatial is built strictly for high-performance spatial analytics. All radar parsing modules are designed to remain independent of Unreal Engine so they can be abstracted to other APIs. 
 For detailed technical documentation on the data structures, UE5.7 upgrade paths, and implementation notes, please see `Architecture.md`.
+
+## Recent Changelog
+* **Interactive NWS Warnings:** Added interactive National Weather Service warning popups. Users can click on warning polygons in VR to view detailed alert information in a larger, improved warning box.
+* **Level 3 Storm Tracks & Markers:** Integrated Level 3 storm tracks data. Added new Hail and TVS (Tornado Vortex Signature) markers that spawn dynamically at the echo top of storm cells, complete with altitude readings (ft AGL).
+* **3D Drawing & Laser Tools:** Introduced a new 3D drawing tool to annotate the environment and an adjustable laser pointer for precise VR controller interactions.
+* **Elevation & Customization:** Added elevation exaggeration settings that dynamically adjust the 3D map and radar site positioning. Introduced opacity settings and a performance throttler.
+* **Legal & UI Updates:** Added a legal disclaimer screen with persistence. Included color table support, updated the UI typography, and fixed various map tool collision bugs.
+* **Optimization & Fixes:** Optimized the build process by moving includes to CPP files, fixed road placements, and resolved velocity color table parsing issues.
 
 ## Open Source Credits
 In accordance with the GPLv2 license, the core radar ingestion, binary decoding, and processing architecture utilized within this application are fully open-source.
