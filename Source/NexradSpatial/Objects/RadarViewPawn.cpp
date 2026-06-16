@@ -382,8 +382,8 @@ void ARadarViewPawn::Tick(float deltaTime)
 							}
 						}
 						
-						// Hit target reduced by 1/3 (approx 16km)
-						if (minVertexDist <= 166.0f && minVertexDist < closestDist) {
+						// Hit target reduced by another 30%
+						if (minVertexDist <= 115.0f && minVertexDist < closestDist) {
 							closestDist = minVertexDist;
 							closestPolyline = polyline;
 						}
@@ -445,45 +445,40 @@ void ARadarViewPawn::Tick(float deltaTime)
 			}
 
 			if (!widgetInteraction->IsOverInteractableWidget()) {
-				if (currentHoveredMarker) {
-					currentHoveredMarker->OnClick();
-					globalState->showWarningPopup = false;
-					warningPopupWidget->SetVisibility(false);
-				}
-				
-				AGISPolyline* polylineToClick = currentHoveredPolyline;
-				
-				// VR JITTER FIX: If the user clicked but slightly missed the line, do a fat "forgiving" hit test
-				if (!polylineToClick) {
-					float bestDist = 999999.0f;
-					FVector startRay = widgetInteraction->GetComponentLocation();
-					FVector endRay = startRay + (widgetInteraction->GetForwardVector() * 100000.0f);
-					for (TActorIterator<AGISPolyline> It(GetWorld()); It; ++It) {
-						AGISPolyline* polyline = *It;
-						if (polyline->bIsWarning && polyline->WarningLocalVertices.Num() > 0) {
-							FTransform polyTransform = polyline->GetActorTransform();
-							for (int i = 0; i < polyline->WarningLocalVertices.Num(); i += 4) {
-								FVector worldVertex = polyTransform.TransformPosition(polyline->WarningLocalVertices[i]);
-								FVector closestPointOnRay = FMath::ClosestPointOnSegment(worldVertex, startRay, endRay);
-								float dist = FVector::Dist(closestPointOnRay, worldVertex);
-								// Hit target reduced by 1/3
-								if (dist <= 333.0f && dist < bestDist) {
-									bestDist = dist;
-									polylineToClick = polyline;
+				if (!currentHoveredMarker) {
+					AGISPolyline* polylineToClick = currentHoveredPolyline;
+					
+					// VR JITTER FIX: If the user clicked but slightly missed the line, do a fat "forgiving" hit test
+					if (!polylineToClick) {
+						float bestDist = 999999.0f;
+						FVector startRay = widgetInteraction->GetComponentLocation();
+						FVector endRay = startRay + (widgetInteraction->GetForwardVector() * 100000.0f);
+						for (TActorIterator<AGISPolyline> It(GetWorld()); It; ++It) {
+							AGISPolyline* polyline = *It;
+							if (polyline->bIsWarning && polyline->WarningLocalVertices.Num() > 0) {
+								FTransform polyTransform = polyline->GetActorTransform();
+								for (int i = 0; i < polyline->WarningLocalVertices.Num(); i += 4) {
+									FVector worldVertex = polyTransform.TransformPosition(polyline->WarningLocalVertices[i]);
+									FVector closestPointOnRay = FMath::ClosestPointOnSegment(worldVertex, startRay, endRay);
+									float dist = FVector::Dist(closestPointOnRay, worldVertex);
+									// Hit target reduced by another 30%
+									if (dist <= 230.0f && dist < bestDist) {
+										bestDist = dist;
+										polylineToClick = polyline;
+									}
 								}
 							}
 						}
 					}
-				}
-				
-				if (polylineToClick && polylineToClick->bIsWarning) {
-					// Vibrate the controller so the user knows they successfully clicked it!
-					if (APlayerController* PC = Cast<APlayerController>(GetController())) {
-						PC->PlayDynamicForceFeedback(1.0f, 0.2f, true, true, true, true);
-					}
 					
-					globalState->showWarningPopup = true;
-					globalState->warningPopupText = std::string(TCHAR_TO_UTF8(*polylineToClick->WarningText));
+					if (polylineToClick && polylineToClick->bIsWarning) {
+						// Vibrate the controller so the user knows they successfully clicked it!
+						if (APlayerController* PC = Cast<APlayerController>(GetController())) {
+							PC->PlayDynamicForceFeedback(1.0f, 0.2f, true, true, true, true);
+						}
+						
+						globalState->showWarningPopup = true;
+						globalState->warningPopupText = std::string(TCHAR_TO_UTF8(*polylineToClick->WarningText));
 
 					// Display the text inside the VR 3D world!
 					FString textStr = *polylineToClick->WarningText;
@@ -527,8 +522,8 @@ void ARadarViewPawn::Tick(float deltaTime)
 							]
 						]
 					);
-					// Place it right in front of the user's face (camera) at a comfortable 1.5 meter reading distance
-					FVector spawnLoc = camera->GetComponentLocation() + (camera->GetForwardVector() * 150.0f);
+					// Place it right in front of the user's face (camera) at a comfortable reading distance (moved 10% closer)
+					FVector spawnLoc = camera->GetComponentLocation() + (camera->GetForwardVector() * 135.0f);
 					warningPopupWidget->SetWorldLocation(spawnLoc);
 					// Make it perfectly face the camera
 					FRotator lookAt = FRotationMatrix::MakeFromX(camera->GetComponentLocation() - spawnLoc).Rotator();
@@ -536,7 +531,7 @@ void ARadarViewPawn::Tick(float deltaTime)
 					warningPopupWidget->SetVisibility(true);
 				}
 			}
-
+		}
 		} else if (clickAxis < 0.3f && bWasClicked) {
 			bWasClicked = false;
 			widgetInteraction->ReleasePointerKey(EKeys::LeftMouseButton);
