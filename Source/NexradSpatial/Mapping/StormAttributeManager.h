@@ -61,6 +61,7 @@ private:
         float maxSize;
         float drct;
         float sknt;
+        float top;
         FString storm_id;
     };
     
@@ -68,5 +69,6 @@ private:
     FCriticalSection attributesMutex;
     
     TArray<UTextRenderComponent*> TextComponents;
+    TArray<UTextRenderComponent*> EchoTopTextComponents;
     UMaterial* TextMaterial = nullptr;
 };

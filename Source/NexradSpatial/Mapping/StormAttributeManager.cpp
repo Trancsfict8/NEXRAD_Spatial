@@ -99,6 +99,9 @@ void AStormAttributeManager::HideAllText()
     for (UTextRenderComponent* TextComp : TextComponents) {
         if (TextComp) TextComp->SetVisibility(false);
     }
+    for (UTextRenderComponent* TopComp : EchoTopTextComponents) {
+        if (TopComp) TopComp->SetVisibility(false);
+    }
 }
 
 void AStormAttributeManager::Tick(float DeltaTime)
@@ -219,6 +222,7 @@ void AStormAttributeManager::OnAttributesFetched(FHttpRequestPtr Request, FHttpR
                     attr.drct = drct;
                     attr.sknt = sknt;
                     attr.storm_id = PropsObj->GetStringField(TEXT("storm_id"));
+                    attr.top = PropsObj->GetNumberField(TEXT("top"));
                     
                     if (isTVS) {
                         attr.type = TEXT("TVS");
@@ -286,8 +290,10 @@ void AStormAttributeManager::UpdateMeshes()
             TvsMeshComponent->AddInstance(transform);
         } else if (attr.type == TEXT("HAIL") && globalState->showLevel3StormAttributes) {
             // HAIL
-            // Position 40k feet high (12192 meters) so it's above the storm cells
-            SimpleVector3<double> loc = globalState->globe->GetPointScaledDegrees(attr.lat, attr.lon, 12192 * globalState->elevationExaggeration);
+            // Use attr.top * 1000.0f * 0.3048f as altitude in meters, fallback to 12192 (40k ft) if missing
+            float altitudeMeters = (attr.top > 0.0f) ? (attr.top * 1000.0f * 0.3048f) : 12192.0f;
+            
+            SimpleVector3<double> loc = globalState->globe->GetPointScaledDegrees(attr.lat, attr.lon, altitudeMeters * globalState->elevationExaggeration);
 
             FTransform transform;
             transform.SetLocation(FVector(loc.x, loc.y, loc.z));
@@ -308,22 +314,45 @@ void AStormAttributeManager::UpdateMeshes()
                 NewText->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
                 NewText->SetHorizontalAlignment(EHTA_Center);
                 if (TextMaterial) NewText->SetTextMaterial(TextMaterial);
-                NewText->SetWorldSize(30.0f); // 30 Unreal Units (equivalent to 3km in VR map scale, slightly smaller than the 5km sphere)
+                NewText->SetWorldSize(30.0f); // 30 Unreal Units (equivalent to 3km in VR map scale)
                 TextComponents.Add(NewText);
+            }
+            
+            if (EchoTopTextComponents.Num() <= textIndex) {
+                UTextRenderComponent* NewTopText = NewObject<UTextRenderComponent>(this);
+                NewTopText->RegisterComponent();
+                NewTopText->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
+                NewTopText->SetHorizontalAlignment(EHTA_Center);
+                if (TextMaterial) NewTopText->SetTextMaterial(TextMaterial);
+                NewTopText->SetWorldSize(15.0f); // 15 Unreal Units (smaller text for Echo Top)
+                EchoTopTextComponents.Add(NewTopText);
             }
             
             UTextRenderComponent* TextComp = TextComponents[textIndex];
             TextComp->SetVisibility(true);
             TextComp->SetText(FText::FromString(FString::Printf(TEXT("%.2f\""), attr.maxSize)));
             
-            SimpleVector3<double> locText = globalState->globe->GetPointScaledDegrees(attr.lat, attr.lon, (12192 + 3000) * globalState->elevationExaggeration);
-            TextComp->SetWorldLocation(FVector(locText.x, locText.y, locText.z)); // Place 3km higher than the sphere
+            UTextRenderComponent* TopComp = EchoTopTextComponents[textIndex];
+            TopComp->SetVisibility(true);
+            TopComp->SetText(FText::FromString(FString::Printf(TEXT("%.0f ft AGL"), attr.top * 1000.0f)));
+            
+            // Hail size text higher up
+            SimpleVector3<double> locText = globalState->globe->GetPointScaledDegrees(attr.lat, attr.lon, (altitudeMeters + 4500) * globalState->elevationExaggeration);
+            TextComp->SetWorldLocation(FVector(locText.x, locText.y, locText.z)); 
+            
+            // Echo top text slightly lower than hail size, but above sphere
+            SimpleVector3<double> locTopText = globalState->globe->GetPointScaledDegrees(attr.lat, attr.lon, (altitudeMeters + 2800) * globalState->elevationExaggeration);
+            TopComp->SetWorldLocation(FVector(locTopText.x, locTopText.y, locTopText.z)); 
             
             // Billboarding: face the camera
             if (GetWorld()->GetFirstPlayerController() && GetWorld()->GetFirstPlayerController()->PlayerCameraManager) {
                 FVector CameraLoc = GetWorld()->GetFirstPlayerController()->PlayerCameraManager->GetCameraLocation();
+                
                 FRotator FaceRot = (CameraLoc - TextComp->GetComponentLocation()).Rotation();
                 TextComp->SetWorldRotation(FaceRot);
+                
+                FRotator FaceRotTop = (CameraLoc - TopComp->GetComponentLocation()).Rotation();
+                TopComp->SetWorldRotation(FaceRotTop);
             }
             
             textIndex++;
