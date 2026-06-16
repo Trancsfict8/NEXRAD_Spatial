@@ -56,3 +56,15 @@ Upgrading OpenStorm from Unreal Engine 5.2 to 5.7 involved several breaking API 
 10. **Persistent State & UX Refinements**:
     *   **Feature**: `SettingsSaver.cpp` was updated to persistently save new settings like Imperial/Metric units, Max FPS limits, map brightness, and warning type toggles to `settings.json`.
     *   **Feature**: Mapped specific VR controllers (Left Trigger to move Up, Left Grip to move Down) directly via dynamic API mapping and `DefaultInput.ini` fallback explicitly to prevent Oculus OpenXR mapping issues. Added a dynamic "LOADING DATA..." tag above active radar volumes to improve user feedback.
+11. **Interactive NWS Warning Popups**:
+    *   **Feature**: Expanded the warning polygon system to support interactive, laser-pointer driven clicks. When an intersection is detected with a `GISPolyline`, a detailed floating UI box spawns near the user, displaying the full National Weather Service text for that specific polygon.
+12. **Level 3 Data & Storm Tracking (Hail/TVS)**:
+    *   **Feature**: Integrated Level 3 storm track products. The system parses storm cell attributes and generates 3D visual markers for Hail and Tornado Vortex Signatures (TVS).
+    *   **Architecture**: Markers are dynamically positioned at the top of the echo core (echotop) rather than the ground, utilizing altitude (ft AGL) translations mapped to the 3D globe to accurately depict where the threat is located volumetrically.
+13. **3D Drawing & Laser Tools**:
+    *   **Feature**: Built an adjustable laser pointer component into the VR controller logic, allowing precise spatial interaction. Added a 3D drawing tool component that leaves persistent trail lines in the environment, enabling users to annotate storms.
+14. **Custom Color Tables & Visual Adjustments**:
+    *   **Feature**: Introduced support for loading external `.pal` color table files into the `ColorTables/` directory. This allows custom color mapping for Reflectivity and Velocity rendering logic in the ray marching shaders.
+    *   **Feature**: Added dynamic Elevation Exaggeration (which automatically scales both the underlying Map mesh and the Radar Site Z-positions), overall radar opacity settings, and an explicit performance throttler to manage rendering load on standalone VR hardware.
+15. **Legal & Disclaimer Screen**:
+    *   **Feature**: Implemented a necessary startup legal disclaimer screen. Its acceptance state is saved persistently to bypass the screen on subsequent launches, utilizing the updated `SettingsSaver` logic.
