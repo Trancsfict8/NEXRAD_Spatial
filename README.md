@@ -24,9 +24,10 @@ This project is a heavily expanded derivative work of the open-source **OpenStor
 
 ### New Spatial & VR Features (Nexrad Spatial)
 * **Immersive VR Inspector Tool:** Reach out with your VR controller to probe the center of a storm. Dynamically extracts the exact dBZ, velocity, or specific radar moment of the voxel you are interacting with, displaying the data and your exact altitude AGL dynamically on your controller.
-* **Live NWS Warning Polygons:** Seamless integration with the National Weather Service API. Real-time Tornado, Severe Thunderstorm, Flash Flood, and Special Marine warnings are downloaded and mapped as procedural mesh outlines perfectly to the 3D globe's surface in your environment.
+* **Live NWS Warning Polygons:** Seamless integration with the National Weather Service API. Real-time Tornado, Severe Thunderstorm, Flash Flood, and Special Marine warnings are downloaded and mapped as procedural mesh outlines perfectly to the 3D globe's surface in your environment. You can interact with and click these warning polygons in VR to instantly view the detailed alert text and information directly from the NWS.
 * **Intelligent LOD & Culling System:** Performance-first architecture automatically distance-culls detailed GIS data and warning shapes when they aren't relevant to your camera view. You can even drag and drop local high-detail Census TIGER shapefiles into the engine for automatic dynamic loading.
 * **Data-Driven Spatial UI:** Beautiful floating spatial UI built natively using Slate. Toggle Imperial/Metric unit conversions dynamically across the app, constrain frame rates, modify warning visibilities, and customize VR locomotion properties.
+* **Custom Color Tables:** Full support for custom radar color tables. Personalize how radar products like reflectivity and velocity are visualized by easily dropping `.pal` configuration files into the project.
 * **Overhauled Locomotion:** Extended OpenXR VR locomotion mapping (Trigger and Grip vertical movement bindings) across modern hardware including Meta Quest, Valve Index, and Windows Mixed Reality headsets. 
 
 ## Getting Data
