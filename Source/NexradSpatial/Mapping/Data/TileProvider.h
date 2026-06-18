@@ -1,5 +1,6 @@
 #include <string>
 #include <functional>
+#include <memory>
 #include "HTTPRequest.h"
 
 class TileProvider;
@@ -7,6 +8,7 @@ class Tar;
 
 class Tile{
 public:
+	std::shared_ptr<bool> isAlive;
 	std::function<void()> readyCallback = NULL;
 	bool isReady = false;
 	uint8_t* data = NULL;

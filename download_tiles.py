@@ -3,8 +3,8 @@ import os
 import tarfile
 import math
 
-# Google Maps Hybrid (Satellite + Detailed Roads/City labels)
-URL_TEMPLATE = 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}'
+# USGS Imagery Topo (Satellite + Detailed Roads/City labels)
+URL_TEMPLATE = 'https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryTopo/MapServer/tile/{z}/{y}/{x}'
 
 def deg2num(lat_deg, lon_deg, zoom):
     lat_rad = math.radians(lat_deg)
@@ -21,15 +21,15 @@ def download_tiles():
     min_lat, max_lat = 24.0, 49.0
     min_lon, max_lon = -125.0, -66.0
 
-    with tarfile.open('GoogleHybridMap.tar', 'w') as tar:
+    with tarfile.open('USGSImageryTopo.tar', 'w') as tar:
         # Download Global (Low res)
         for z in range(0, 5):
             for x in range(2**z):
                 for y in range(2**z):
                     fetch_and_tar(tar, z, y, x)
         
-        # Download USA (High-res up to zoom 12)
-        for z in range(5, 13):
+        # Download USA (High-res up to zoom 14)
+        for z in range(5, 12):
             x_min, y_max = deg2num(min_lat, min_lon, z)
             x_max, y_min = deg2num(max_lat, max_lon, z)
             for x in range(x_min, x_max + 1):
@@ -53,3 +53,5 @@ def fetch_and_tar(tar, z, y, x):
             pass
 
 download_tiles()
+
+

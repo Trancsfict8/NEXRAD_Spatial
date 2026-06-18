@@ -3,6 +3,9 @@
 #include "Tar.h"
 #include <cmath>
 #include <stdio.h>
+#include "HttpModule.h"
+#include "Interfaces/IHttpRequest.h"
+#include "Interfaces/IHttpResponse.h"
 
 void Tile::SetCallback(std::function<void()> callback){
 	if(isReady){
@@ -13,6 +16,9 @@ void Tile::SetCallback(std::function<void()> callback){
 }
 
 Tile::~Tile(){
+	if(isAlive) {
+		*isAlive = false;
+	}
 	if(data != NULL){
 		delete[] data;
 	}
@@ -27,6 +33,7 @@ TileProvider::TileProvider(std::string name, std::string url, std::string imageT
 
 Tile *TileProvider::GetTile(int zoom, int y, int x){
 	Tile* tile = new Tile();
+	tile->isAlive = std::make_shared<bool>(true);
 	tile->tileProvider = this;
 	if(zoom > maxZoom){
 		return tile;
@@ -91,9 +98,49 @@ Tile *TileProvider::GetTile(int zoom, int y, int x){
 			}
 		}
 	}
-	// TODO: dynamic cache and http
-	tile->isReady = true;
-	
+	// HTTP download via Unreal Engine
+	FString fUrl(url.c_str());
+	fUrl = fUrl.Replace(TEXT("{x}"), *FString::Printf(TEXT("%d"), x));
+	fUrl = fUrl.Replace(TEXT("{y}"), *FString::Printf(TEXT("%d"), y));
+	fUrl = fUrl.Replace(TEXT("{z}"), *FString::Printf(TEXT("%d"), zoom));
+
+	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> HttpRequest = FHttpModule::Get().CreateRequest();
+	HttpRequest->SetVerb("GET");
+	HttpRequest->SetURL(fUrl);
+	HttpRequest->SetHeader("User-Agent", "OpenStormVR/1.0");
+
+	std::shared_ptr<bool> alive = tile->isAlive;
+	HttpRequest->OnProcessRequestComplete().BindLambda([tile, alive, this](FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful) {
+		if (!alive || !(*alive)) {
+			// Tile was deleted before request completed
+			return;
+		}
+		if (bWasSuccessful && Response.IsValid() && Response->GetResponseCode() == 200) {
+			const TArray<uint8>& ResponseData = Response->GetContent();
+			if (ResponseData.Num() > 0) {
+				tile->dataSize = ResponseData.Num();
+				tile->data = new uint8_t[tile->dataSize];
+				FMemory::Memcpy(tile->data, ResponseData.GetData(), tile->dataSize);
+				
+				// Save to dynamic cache
+				if(dynamicCache != ""){
+					std::string path = dynamicCache + tile->fileName;
+					FILE* file = fopen(path.c_str(), "wb");
+					if(file != NULL){
+						fwrite(tile->data, 1, tile->dataSize, file);
+						fclose(file);
+					}
+				}
+			}
+		}
+		tile->isReady = true;
+		if (tile->readyCallback) {
+			tile->readyCallback();
+		}
+	});
+
+	HttpRequest->ProcessRequest();
+	tile->isReady = false;
 	return tile;
 }
 

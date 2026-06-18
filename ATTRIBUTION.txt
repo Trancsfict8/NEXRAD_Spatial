@@ -1,0 +1,6 @@
+This project utilizes map services and data from the U.S. Geological Survey (USGS).
+
+Acknowledgment Statement:
+"Map services and data available from U.S. Geological Survey, National Geospatial Program."
+
+For more information on The National Map, visit: https://nationalmap.gov
