@@ -4,8 +4,11 @@
 
 
 #include "RadarVolumeRender.h"
-#include "../UI/Native.h"
 #include "RadarGameStateBase.h"
+#include "../UI/Native.h"
+#include "Kismet/GameplayStatics.h"
+#include "RadarViewPawn.h"
+#include "WeatherAudioManager.h"
 #include "../EngineHelpers/MaterialRenderTarget.h"
 #include "../Radar/RadarColorTableSubsystem.h"
 
@@ -342,6 +345,7 @@ void ARadarVolumeRender::HandleRadarDataEvent(RadarCollection::RadarUpdateEvent 
 		// copy to local buffer to decompress and retain data
 		radarData->CopyFrom(event.data);
 		
+
 		// benchTime = SystemAPI::CurrentTime() - benchTime;
 		// fprintf(stderr, "volume decompress time %fs\n", benchTime);
 		// fprintf(stderr, "volume bounds %f %f %f\n", radarData->stats.boundLower, radarData->stats.boundUpper, radarData->stats.boundRadius);
@@ -396,6 +400,7 @@ void ARadarVolumeRender::HandleRadarDataEvent(RadarCollection::RadarUpdateEvent 
 		auto vector = globalState->globe->GetPointScaledDegrees(event.data->stats.latitude, event.data->stats.longitude, event.data->stats.altitude * globalState->elevationExaggeration);
 		radarMaterialInstance->SetVectorParameterValue(TEXT("Center"), FVector(vector.x, vector.y, vector.z));
 		this->SetActorLocation(FVector(vector.x, vector.y, vector.z));
+		
 		
 		globalState->EmitEvent("GlobeUpdate");
 		

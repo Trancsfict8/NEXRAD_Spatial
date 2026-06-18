@@ -103,6 +103,8 @@ ARadarViewPawn::ARadarViewPawn()
 	rightControllerVisual->SetupAttachment(rightController);
 	rightControllerVisual->SetIsVisualizationActive(true);
 	rightControllerVisual->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	weatherAudio = CreateDefaultSubobject<UWeatherAudioManager>(TEXT("WeatherAudio"));
 }
 
 // Called when the game starts or when spawned
@@ -134,8 +136,11 @@ void ARadarViewPawn::BeginPlay()
 	warningPopupWidget->RegisterComponent();
 	warningPopupWidget->SetDrawSize(FVector2D(800, 600));
 	warningPopupWidget->SetRelativeScale3D(FVector(0.12f, 0.12f, 0.12f));
-	warningPopupWidget->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	warningPopupWidget->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	warningPopupWidget->SetCollisionResponseToAllChannels(ECR_Ignore);
+	warningPopupWidget->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
 	warningPopupWidget->SetTwoSided(true);
+	warningPopupWidget->SetWindowFocusable(true);
 	warningPopupWidget->SetVisibility(false);
 
 	// Laser pointer
@@ -273,6 +278,14 @@ void ARadarViewPawn::BeginPlay()
 				}
 			}
 		}));
+		
+		callbackIds.push_back(globalState->RegisterEvent("VolumeUpdate", [this, globalState](std::string stringData, void* extraData) {
+			if (weatherAudio && extraData != NULL && globalState->globe != NULL) {
+				RadarData* radarData = (RadarData*)extraData;
+				auto vector = globalState->globe->GetPointScaledDegrees(radarData->stats.latitude, radarData->stats.longitude, radarData->stats.altitude * globalState->elevationExaggeration);
+				weatherAudio->OnVolumeUpdate(radarData, FVector(vector.x, vector.y, vector.z));
+			}
+		}));
 	}
 	
 	GetWorld()->SpawnActor<AWarningManager>(AWarningManager::StaticClass());
@@ -298,6 +311,9 @@ void ARadarViewPawn::EndPlay(const EEndPlayReason::Type endPlayReason) {
 void ARadarViewPawn::Tick(float deltaTime)
 {
 	Super::Tick(deltaTime);
+	if (weatherAudio) {
+		weatherAudio->UpdateAudioState(deltaTime, camera->GetComponentLocation());
+	}
 	if (radarMaterialInstance == NULL) {
 		if (mainVolumeRender != NULL) {
 			if (mainVolumeRender->radarMaterialInstance != NULL) {
@@ -445,7 +461,15 @@ void ARadarViewPawn::Tick(float deltaTime)
 			}
 
 			if (!widgetInteraction->IsOverInteractableWidget()) {
-				if (!currentHoveredMarker) {
+				if (globalState->showWarningPopup) {
+					// If the warning is up, any click on the map should simply close the warning.
+					// We completely block clicking on other warnings or radar sites so they don't interfere with closing.
+					warningPopupWidget->SetVisibility(false);
+					globalState->showWarningPopup = false;
+				} else if (currentHoveredMarker) {
+					// Handle radar site click
+					currentHoveredMarker->OnClick();
+				} else {
 					AGISPolyline* polylineToClick = currentHoveredPolyline;
 					
 					// VR JITTER FIX: If the user clicked but slightly missed the line, do a fat "forgiving" hit test
@@ -482,6 +506,8 @@ void ARadarViewPawn::Tick(float deltaTime)
 
 					// Display the text inside the VR 3D world!
 					FString textStr = *polylineToClick->WarningText;
+					TSharedPtr<SScrollBox> WarningScrollBox;
+					
 					warningPopupWidget->SetSlateWidget(
 						SNew(SBorder)
 						.BorderImage(new FSlateColorBrush(FLinearColor(0.0f, 0.0f, 0.0f, 0.85f)))
@@ -494,7 +520,7 @@ void ARadarViewPawn::Tick(float deltaTime)
 								SNew(SBox)
 								.WidthOverride(1200.0f)
 								[
-									SNew(SScrollBox)
+									SAssignNew(WarningScrollBox, SScrollBox)
 									+ SScrollBox::Slot()
 									[
 										SNew(STextBlock)
@@ -509,16 +535,49 @@ void ARadarViewPawn::Tick(float deltaTime)
 							.Padding(0, 20.0f, 0, 0)
 							.HAlign(HAlign_Center)
 							[
-								SNew(SButton)
-								.Text(FText::FromString("Close Warning"))
-								.ContentPadding(FMargin(40.0f, 20.0f)) // Massive button padding to make it easy to click in VR
-								.OnClicked_Lambda([this]() {
-									warningPopupWidget->SetVisibility(false);
-									if(ARadarGameStateBase* GS = GetWorld()->GetGameState<ARadarGameStateBase>()) {
-										GS->globalState.showWarningPopup = false;
-									}
-									return FReply::Handled();
-								})
+								SNew(SHorizontalBox)
+								+ SHorizontalBox::Slot()
+								.AutoWidth()
+								.Padding(0, 0, 20.0f, 0)
+								[
+									SNew(SButton)
+									.Text(FText::FromString("Scroll Up"))
+									.ContentPadding(FMargin(40.0f, 20.0f))
+									.OnClicked_Lambda([WarningScrollBox]() {
+										if (WarningScrollBox.IsValid()) {
+											WarningScrollBox->SetScrollOffset(WarningScrollBox->GetScrollOffset() - 400.0f);
+										}
+										return FReply::Handled();
+									})
+								]
+								+ SHorizontalBox::Slot()
+								.AutoWidth()
+								.Padding(0, 0, 20.0f, 0)
+								[
+									SNew(SButton)
+									.Text(FText::FromString("Scroll Down"))
+									.ContentPadding(FMargin(40.0f, 20.0f))
+									.OnClicked_Lambda([WarningScrollBox]() {
+										if (WarningScrollBox.IsValid()) {
+											WarningScrollBox->SetScrollOffset(WarningScrollBox->GetScrollOffset() + 400.0f);
+										}
+										return FReply::Handled();
+									})
+								]
+								+ SHorizontalBox::Slot()
+								.AutoWidth()
+								[
+									SNew(SButton)
+									.Text(FText::FromString("Close Warning"))
+									.ContentPadding(FMargin(40.0f, 20.0f)) // Massive button padding to make it easy to click in VR
+									.OnClicked_Lambda([this]() {
+										warningPopupWidget->SetVisibility(false);
+										if(ARadarGameStateBase* GS = GetWorld()->GetGameState<ARadarGameStateBase>()) {
+											GS->globalState.showWarningPopup = false;
+										}
+										return FReply::Handled();
+									})
+								]
 							]
 						]
 					);
@@ -531,7 +590,7 @@ void ARadarViewPawn::Tick(float deltaTime)
 					warningPopupWidget->SetVisibility(true);
 				}
 			}
-		}
+			}
 		} else if (clickAxis < 0.3f && bWasClicked) {
 			bWasClicked = false;
 			widgetInteraction->ReleasePointerKey(EKeys::LeftMouseButton);

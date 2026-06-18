@@ -13,7 +13,7 @@ public class NexradSpatial : ModuleRules
 	
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "RenderCore", "Engine", "Slate", "SlateCore", "UMG", "HeadMountedDisplay" });
 
-		PrivateDependencyModuleNames.AddRange(new string[] { "InputCore", "ImGui", "AudioCaptureCore", "ProceduralMeshComponent", "ImageWrapper", "RHI", "Json", "HTTP", "XRBase", "EnhancedInput" });
+		PrivateDependencyModuleNames.AddRange(new string[] { "InputCore", "ImGui", "AudioCaptureCore", "ProceduralMeshComponent", "ImageWrapper", "RHI", "Json", "HTTP", "XRBase", "EnhancedInput", "AudioMixer", "MetasoundEngine", "MetasoundFrontend" });
 		
 		bEnableExceptions = true;
 		bUseRTTI = true;

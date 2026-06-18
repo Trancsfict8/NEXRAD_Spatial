@@ -54,6 +54,7 @@ private:
     
     FString lastSiteId = "";
     
+public:
     struct FStormAttr {
         FString type;
         float lat;
@@ -67,6 +68,7 @@ private:
     
     TArray<FStormAttr> currentAttributes;
     FCriticalSection attributesMutex;
+private:
     
     TArray<UTextRenderComponent*> TextComponents;
     TArray<UTextRenderComponent*> EchoTopTextComponents;

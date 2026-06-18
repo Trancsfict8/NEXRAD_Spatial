@@ -66,6 +66,7 @@ public:
 	bool bInspectorEnabled = false; // toggles the VR inspector tool
 	bool enableDrawingTool = false; // toggles 3d line drawing tool
 	bool useImperialUnits = false; // toggles metric/imperial units
+	bool enableStormSounds = true; // toggles spatial weather audio
 	
 	float laserDistance = 150.0f; // length of the laser pointer and distance for tools
 	

@@ -15,6 +15,14 @@
 	],
 	"Plugins": [
 		{
+			"Name": "Metasound",
+			"Enabled": true
+		},
+		{
+			"Name": "AudioModulation",
+			"Enabled": true
+		},
+		{
 			"Name": "ModelingToolsEditorMode",
 			"Enabled": true,
 			"TargetAllowList": [

@@ -10,6 +10,7 @@ class ARadarVolumeRender;
 #include "GameFramework/Pawn.h"
 #include "Camera/CameraComponent.h"
 #include "Components/InputComponent.h"
+#include "WeatherAudioManager.h"
 #include "RadarViewPawn.generated.h"
 
 class ASlateUI;
@@ -148,6 +149,9 @@ public:
 	
 	UPROPERTY(EditAnywhere)
 		ARadarVolumeRender* mainVolumeRender = NULL;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Audio")
+		UWeatherAudioManager* weatherAudio = NULL;
 
 	UPROPERTY(EditAnywhere)
 		AImGuiController* gui = NULL;

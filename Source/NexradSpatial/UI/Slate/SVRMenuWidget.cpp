@@ -745,6 +745,13 @@ TSharedRef<SWidget> SVRMenuWidget::BuildSettingsTab()
 				[this](bool v) { if (GetGlobalState()) GetGlobalState()->useImperialUnits = v; })
 		]
 
+		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
+		[
+			MakeCheckbox(TEXT("Enable Storm Sounds"), 
+				[this]() { return GetGlobalState() && GetGlobalState()->enableStormSounds; }, 
+				[this](bool v) { if (GetGlobalState()) GetGlobalState()->enableStormSounds = v; })
+		]
+
 		+ SVerticalBox::Slot().AutoHeight()[ MakeLabel(TEXT("Performance & Rendering")) ]
 
 		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))

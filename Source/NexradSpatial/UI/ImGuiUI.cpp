@@ -7,6 +7,8 @@
 #include "../Radar/NexradSites/NexradSites.h"
 #include "../Objects/RadarGameStateBase.h"
 #include "../Objects/RadarViewPawn.h"
+#include "../Objects/WeatherAudioManager.h"
+#include "Kismet/GameplayStatics.h"
 #include "ImGuiController.h"
 #include "../EngineHelpers/StringUtils.h"
 #include "./portable-file-dialogs.h"
@@ -1092,11 +1094,48 @@ void ImGuiUI::MainUI()
 		ImGui::End();
 	}
 	
-	if(showDemoWindow){
-		ImGui:: ShowDemoWindow();
+	if (showDemoWindow) {
+		ImGui::ShowDemoWindow();
 	}
-	
-	
+
+	// --- Weather Audio Debug UI ---
+	ARadarViewPawn* Pawn = Cast<ARadarViewPawn>(UGameplayStatics::GetPlayerPawn(imGuiController->GetWorld(), 0));
+	if (Pawn && Pawn->weatherAudio) {
+		ImGui::SetNextWindowSizeConstraints(ImVec2(300, 250), ImVec2(800, 600));
+		if (ImGui::Begin("Weather Audio Debug")) {
+			UWeatherAudioManager* AudioMgr = Pawn->weatherAudio;
+			
+			ImGui::Text("Audio States:");
+			ImGui::ProgressBar(AudioMgr->RainIntensity, ImVec2(-1, 0), "Rain Intensity");
+			ImGui::ProgressBar(AudioMgr->CoreDensity, ImVec2(-1, 0), "Core Density");
+			
+			ImGui::Separator();
+			ImGui::Text("Hail State:");
+			ImGui::TextColored(AudioMgr->IsHailing ? ImVec4(1, 0, 0, 1) : ImVec4(0, 1, 0, 1), 
+							   "Is Hailing: %s", AudioMgr->IsHailing ? "TRUE" : "FALSE");
+			if (AudioMgr->IsHailing) {
+				ImGui::Text("Hail Size: %.2f inches", AudioMgr->HailSize);
+			}
+
+			ImGui::Separator();
+			ImGui::Text("Volume Presence:");
+			
+			float outMean, outMax;
+			FVector cellCenter;
+			if (Pawn->camera && AudioMgr->GetCurrentCellData(Pawn->camera->GetComponentLocation(), outMean, outMax, cellCenter)) {
+				ImGui::TextColored(ImVec4(0, 1, 0, 1), "Camera is INSIDE spatial grid");
+				ImGui::Text("Local Grid Cell Mean dBZ: %.1f", outMean);
+				ImGui::Text("Local Grid Cell Max dBZ: %.1f", outMax);
+			} else {
+				ImGui::TextColored(ImVec4(1, 1, 0, 1), "Camera is OUTSIDE spatial grid");
+				ImGui::Text("Tracking %d Rain Voxels (Centroid: %.0f, %.0f, %.0f)", 
+					AudioMgr->RainVoxelCount, AudioMgr->RainEnvelopeCentroid.X, AudioMgr->RainEnvelopeCentroid.Y, AudioMgr->RainEnvelopeCentroid.Z);
+				ImGui::Text("Tracking %d Core Voxels (Centroid: %.0f, %.0f, %.0f)", 
+					AudioMgr->CoreVoxelCount, AudioMgr->SevereCoreCentroid.X, AudioMgr->SevereCoreCentroid.Y, AudioMgr->SevereCoreCentroid.Z);
+			}
+		}
+		ImGui::End();
+	}
 }
 
 
