@@ -1338,6 +1338,7 @@ void ARadarViewPawn::InterrogateSpatialTriggered() {
 
 	FCollisionQueryParams params;
 	params.AddIgnoredActor(this);
+	params.bTraceComplex = true;
 	FHitResult traceHit;
 	if (GetWorld()->LineTraceSingleByChannel(traceHit, RayOrigin, RayOrigin + RayDir * 1000000.0f, ECC_Visibility, params)) {
 		if (traceHit.GetActor() && traceHit.GetActor()->IsA(AMapMesh::StaticClass())) {

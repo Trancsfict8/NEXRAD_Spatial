@@ -25,7 +25,7 @@ ALocationMarker::ALocationMarker()
 	meshMaterial = ConstructorHelpers::FObjectFinder<UMaterial>(TEXT("Material'/Game/Materials/UnlitColor.UnlitColor'")).Object;
 	meshComponent->SetStaticMesh(mesh);
 	meshComponent->SetMaterial(0, meshMaterial);
-	meshComponent->SetRelativeScale3D(FVector(0.05, 0.05, 0.05));
+	meshComponent->SetRelativeScale3D(FVector(0.025, 0.025, 0.025));
 	
 	textComponent = CreateDefaultSubobject<UTextRenderComponent>(TEXT("Text"));
 	textMaterial = ConstructorHelpers::FObjectFinder<UMaterial>(TEXT("Material'/Game/Materials/UnlitColorText.UnlitColorText'")).Object;

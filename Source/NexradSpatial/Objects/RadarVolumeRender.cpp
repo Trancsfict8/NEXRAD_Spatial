@@ -607,15 +607,15 @@ void ARadarVolumeRender::Tick(float DeltaTime)
 			DynamicCameraClipDistance = FMath::FInterpTo(DynamicCameraClipDistance, 300.0f, DeltaTime, 1.5f);
 		} else if (FrameTimeMs < 8.5f) {
 			// Smoothly expand clipping distance back out
-			DynamicCameraClipDistance = FMath::FInterpTo(DynamicCameraClipDistance, 1500.0f, DeltaTime, 1.0f);
+			DynamicCameraClipDistance = FMath::FInterpTo(DynamicCameraClipDistance, 10000.0f, DeltaTime, 1.0f);
 		}
 	} else {
 		// Optimization disabled, set to maximum distance
-		DynamicCameraClipDistance = FMath::FInterpTo(DynamicCameraClipDistance, 1500.0f, DeltaTime, 1.0f);
+		DynamicCameraClipDistance = FMath::FInterpTo(DynamicCameraClipDistance, 10000.0f, DeltaTime, 1.0f);
 	}
 	
 	// Establish Scale-Accurate Constraints (1 UU = 100m)
-	DynamicCameraClipDistance = FMath::Clamp(DynamicCameraClipDistance, 300.0f, 1500.0f);
+	DynamicCameraClipDistance = FMath::Clamp(DynamicCameraClipDistance, 300.0f, 10000.0f);
 
 	if(radarMaterialInstance) {
 		radarMaterialInstance->SetScalarParameterValue(TEXT("DynamicCameraClipDistance"), DynamicCameraClipDistance);
