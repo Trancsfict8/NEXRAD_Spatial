@@ -82,11 +82,14 @@ void UWeatherAudioManager::OnVolumeUpdate(RadarData* data, FVector InRadarCenter
     RadarCenter = InRadarCenter;
 
     // Make local copies to avoid game thread lifetime issues
+    // Using SetNumUninitialized + Memcpy avoids TArray reallocations during Append and is much faster for large arrays
     TArray<float> LocalBuffer;
-    LocalBuffer.Append(data->buffer, data->fullBufferSize);
+    LocalBuffer.SetNumUninitialized(data->fullBufferSize);
+    FMemory::Memcpy(LocalBuffer.GetData(), data->buffer, data->fullBufferSize * sizeof(float));
 
     TArray<RadarData::SweepInfo> LocalSweeps;
-    LocalSweeps.Append(data->sweepInfo, data->sweepBufferCount);
+    LocalSweeps.SetNumUninitialized(data->sweepBufferCount);
+    FMemory::Memcpy(LocalSweeps.GetData(), data->sweepInfo, data->sweepBufferCount * sizeof(RadarData::SweepInfo));
 
     RadarData::Stats LocalStats = data->stats;
     FVector Center = InRadarCenter;
@@ -98,7 +101,8 @@ void UWeatherAudioManager::OnVolumeUpdate(RadarData* data, FVector InRadarCenter
     int thetaBufferSize = data->thetaBufferSize;
 
     // Launch async task
-    Async(EAsyncExecution::ThreadPool, [this, LocalBuffer, LocalSweeps, LocalStats, Center, radiusBufferCount, thetaBufferCount, sweepBufferCount, sweepBufferSize, thetaBufferSize]() {
+    // MoveTemp the local arrays into the lambda to avoid a secondary expensive allocation + copy of the 100MB buffer
+    Async(EAsyncExecution::ThreadPool, [this, LocalBuffer = MoveTemp(LocalBuffer), LocalSweeps = MoveTemp(LocalSweeps), LocalStats, Center, radiusBufferCount, thetaBufferCount, sweepBufferCount, sweepBufferSize, thetaBufferSize]() {
         TArray<float> TempGrid;
         TempGrid.Init(-INFINITY, GridResXY * GridResXY * GridResZ);
 
@@ -244,10 +248,21 @@ void UWeatherAudioManager::UpdateAudioState(float DeltaTime, FVector CameraPos)
     bool insideVolume = GetCurrentCellData(CameraPos, localMean, localMax, cellCenter);
 
     // Check if the user has disabled storm sounds in the settings
+    // Also, mute the sounds if the player is under 5000 ft (1524 meters) to avoid ground clutter triggering rain sounds.
     bool bEnableStormSounds = true;
     if (UWorld* World = GetWorld()) {
         if (ARadarGameStateBase* GameState = World->GetGameState<ARadarGameStateBase>()) {
             bEnableStormSounds = GameState->globalState.enableStormSounds;
+            
+            if (bEnableStormSounds && GameState->globalState.globe) {
+                SimpleVector3<double> latLonAlt = GameState->globalState.globe->GetLatLonAltDegrees(SimpleVector3<double>(CameraPos.X, CameraPos.Y, CameraPos.Z));
+                double ex = GameState->globalState.elevationExaggeration;
+                double realAltitudeMeters = (ex > 0.0) ? (latLonAlt.z / ex) : latLonAlt.z;
+                
+                if (realAltitudeMeters < 1524.0) { // 1524 meters = 5000 ft
+                    bEnableStormSounds = false;
+                }
+            }
         }
     }
 
@@ -304,19 +319,27 @@ void UWeatherAudioManager::UpdateAudioState(float DeltaTime, FVector CameraPos)
         IsHailing = true;
         HailSize = FMath::Clamp((localMax - 55.0f) / 10.0f, 0.2f, 1.0f);
     }
-    AStormAttributeManager* StormMgr = nullptr;
-    if (UWorld* World = GetWorld()) {
-        for (TActorIterator<AStormAttributeManager> It(World); It; ++It) {
-            StormMgr = *It;
-            break;
+    if (!IsValid(CachedStormMgr)) {
+        if (UWorld* World = GetWorld()) {
+            for (TActorIterator<AStormAttributeManager> It(World); It; ++It) {
+                CachedStormMgr = *It;
+                break;
+            }
         }
     }
     
-    if (StormMgr) {
+    if (CachedStormMgr) {
         AStormAttributeManager::FStormAttr closestHail;
         float minDist = FLT_MAX;
-        StormMgr->attributesMutex.Lock();
-        for (const auto& attr : StormMgr->currentAttributes) {
+        
+        // Copy the array inside the lock so we don't hold the mutex while doing expensive math
+        TArray<AStormAttributeManager::FStormAttr> localAttributes;
+        {
+            FScopeLock Lock(&CachedStormMgr->attributesMutex);
+            localAttributes = CachedStormMgr->currentAttributes;
+        }
+
+        for (const auto& attr : localAttributes) {
             if (attr.type == "HAIL") {
                 // Approximate position for the hail using standard UE distance from center.
                 // We don't have direct globe access easily here without GlobalState, 
@@ -342,7 +365,6 @@ void UWeatherAudioManager::UpdateAudioState(float DeltaTime, FVector CameraPos)
                 }
             }
         }
-        StormMgr->attributesMutex.Unlock();
 
         // 50.0f UU = 5 km radius for hail core audio
         if (minDist < 50.0f && bEnableStormSounds) { 

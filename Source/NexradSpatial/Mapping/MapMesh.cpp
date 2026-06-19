@@ -70,10 +70,10 @@ inline double TileYToLat(int y, int z)
 // load tile from memory into a texture
 class TextureLoader : public AsyncTaskRunner {
 public:
-	AMapMesh* mapMesh;
-	Tile* tile;
-	TextureLoader(AMapMesh* mapMesh, Tile* tile) {
-		this->mapMesh = mapMesh;
+	TWeakObjectPtr<AMapMesh> weakMesh;
+	std::shared_ptr<Tile> tile;
+	TextureLoader(AMapMesh* mapMesh, std::shared_ptr<Tile> tile) {
+		this->weakMesh = mapMesh;
 		this->tile = tile;
 	}
 	
@@ -123,54 +123,40 @@ public:
 		IImageWrapperModule& ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(FName("ImageWrapper"));
 		EImageFormat imageFormat = ImageWrapperModule.DetectImageFormat(tile->data, tile->dataSize);
 		if (imageFormat == EImageFormat::Invalid || canceled) {
-			delete tile;
 			return;
 		}
 
 		// Create an image wrapper for the detected image format
 		TSharedPtr<IImageWrapper> imageWrapper = ImageWrapperModule.CreateImageWrapper(imageFormat);
 		if (!imageWrapper.IsValid() || canceled) {
-			delete tile;
 			return;
 		}
 
 		TArray64<uint8> rawData;
-		imageWrapper->SetCompressed(tile->data, tile->dataSize);
-		imageWrapper->GetRaw(ERGBFormat::BGRA, 8, rawData);
-		if (rawData.Num() == 0 || canceled) {
-			delete tile;
+		if (!imageWrapper->SetCompressed(tile->data, tile->dataSize)) {
 			return;
 		}
-
-		delete tile;
+		if (!imageWrapper->GetRaw(ERGBFormat::BGRA, 8, rawData)) {
+			return;
+		}
+		if (rawData.Num() == 0 || canceled) {
+			return;
+		}
 
 		//FName TextureName = MakeUniqueObjectName(GetTransientPackage(), UTexture2D::StaticClass(),  TEXT("TileTexture"));
 		//UTexture2D* texture = UTexture2D::CreateTransient(imageWrapper->GetWidth(), imageWrapper->GetHeight(), EPixelFormat::PF_B8G8R8A8, TextureName);
 		//texture->UpdateResource();
-		UTexture2D* texture = CreateTexture(mapMesh, rawData, imageWrapper->GetWidth(), imageWrapper->GetHeight(), EPixelFormat::PF_B8G8R8A8,TEXT("TileTexture"));
+		UTexture2D* texture = CreateTexture(weakMesh.Get(), rawData, imageWrapper->GetWidth(), imageWrapper->GetHeight(), EPixelFormat::PF_B8G8R8A8,TEXT("TileTexture"));
 		// texture->ConditionalBeginDestroy();
 		
 		if (canceled) {
 			return;
 		}
-		// fprintf(stderr, "  %i %i  ", (int)rawData.Num(), (int)texture->GetSizeX());
-		// uint8* buffer = rawData.GetData();
-		// size_t bufferSizeBytes = rawData.Num();
-		// int pixelSizeBytes = 4;
-		// int width = texture->GetSizeX();
-		// FUpdateTextureRegion2D* regions = new FUpdateTextureRegion2D[1]();
-		// regions[0].DestX = 0;
-		// regions[0].DestY = 0;
-		// regions[0].SrcX = 0;
-		// regions[0].SrcY = 0;
-		// regions[0].Width = width;
-		// regions[0].Height = std::min(bufferSizeBytes / pixelSizeBytes / width, (size_t)texture->GetSizeY());
-
-		// texture->UpdateTextureRegions(0, 1, regions, width * pixelSizeBytes, pixelSizeBytes, (uint8*)buffer, [this, texture](uint8* dataPtr, const FUpdateTextureRegion2D* regionsPtr) {
-		// 	delete regionsPtr;
-		// });
-		mapMesh->texture = texture;
-		mapMesh->pendingTexture = true;
+		AMapMesh* mesh = weakMesh.Get();
+		if (mesh) {
+			mesh->texture = texture;
+			mesh->pendingTexture = true;
+		}
 	}
 };
 
@@ -179,19 +165,23 @@ public:
 class TileLoader : public AsyncTaskRunner {
 public:
 	AMapMesh* mapMesh;
+	std::shared_ptr<Tile> tile;
 	TileLoader(AMapMesh* mapMesh) {
 		this->mapMesh = mapMesh;
 	}
+	~TileLoader() {}
 	void Task() {
 		//fprintf(stderr, "TileLoader::Task");
-		Tile* tile = mapMesh->manager->tileProvider->GetTile(mapMesh->layer, mapMesh->tileY, mapMesh->tileX);
-		tile->SetCallback([this, tile]() {
-			//fprintf(stderr, "TileLoader::Task::SetCallback");
-			if (tile->data != NULL && !canceled) {
-				mapMesh->textureLoader = new TextureLoader(mapMesh, tile);
-				mapMesh->textureLoader->Start();
-			} else {
-				delete tile;
+		tile = mapMesh->manager->tileProvider->GetTile(mapMesh->layer, mapMesh->tileY, mapMesh->tileX);
+		TWeakObjectPtr<AMapMesh> weakMesh(mapMesh);
+		std::shared_ptr<Tile> localTile = tile;
+		tile->SetCallback([weakMesh, localTile]() {
+			AMapMesh* mesh = weakMesh.Get();
+			if (mesh) {
+				if (localTile->data != NULL) {
+					mesh->textureLoader = new TextureLoader(mesh, localTile);
+					mesh->textureLoader->Start();
+				}
 			}
 		});
 	}

@@ -25,14 +25,16 @@ This project is a heavily expanded derivative work of the open-source **OpenStor
 ### New Spatial & VR Features (Nexrad Spatial)
 * **Immersive VR Inspector Tool:** Reach out with your VR controller to probe the center of a storm. Dynamically extracts the exact dBZ, velocity, or specific radar moment of the voxel you are interacting with, displaying the data and your exact altitude AGL dynamically on your controller.
 * **Live NWS Warning Polygons:** Seamless integration with the National Weather Service API. Real-time Tornado, Severe Thunderstorm, Flash Flood, and Special Marine warnings are downloaded and mapped as procedural mesh outlines perfectly to the 3D globe's surface in your environment. You can interact with and click these warning polygons in VR to instantly view the detailed alert text and information directly from the NWS.
-* **Intelligent LOD & Culling System:** Performance-first architecture automatically distance-culls detailed GIS data and warning shapes when they aren't relevant to your camera view. You can even drag and drop local high-detail Census TIGER shapefiles into the engine for automatic dynamic loading.
+* **Level 3 Storm Tracks & 3D Markers:** Process live Level 3 storm tracking data, generating dynamic visual Hail and TVS (Tornado Vortex Signature) icons right at the exact storm cell echotop altitude.
+* **Spatial Weather Audio:** Experience the storms with immersive 3D spatialized rain and hail audio that responds to your position within the radar volume.
+* **Intelligent LOD & Culling System:** Performance-first architecture automatically distance-culls detailed GIS data and warning shapes when they aren't relevant to your camera view. 
 * **Data-Driven Spatial UI:** Beautiful floating spatial UI built natively using Slate. Toggle Imperial/Metric unit conversions dynamically across the app, constrain frame rates, modify warning visibilities, and customize VR locomotion properties.
 * **Custom Color Tables:** Full support for custom radar color tables. Personalize how radar products like reflectivity and velocity are visualized by easily dropping `.pal` configuration files into the project.
 * **Overhauled Locomotion:** Extended OpenXR VR locomotion mapping (Trigger and Grip vertical movement bindings) across modern hardware including Meta Quest, Valve Index, and Windows Mixed Reality headsets. 
 
 ## Getting Data
 NEXRAD and European ODIM H5 radar data are supported out of the box.
-* Simply click on a physical radar dish on the 3D map inside the app and press the **Start** button to instantly fetch live data.
+* Simply click on a physical radar dish on the 3D map inside the app to instantly fetch live data.
 * Retrieve historical archive data manually via [Amazon AWS Unidata NEXRAD Archives](https://s3.amazonaws.com/unidata-nexrad-level2/index.html).
 
 ## Building
@@ -62,6 +64,7 @@ For detailed technical documentation on the data structures, UE5.7 upgrade paths
 ## Recent Changelog
 * **Interactive NWS Warnings:** Added interactive National Weather Service warning popups. Users can click on warning polygons in VR to view detailed alert information in a larger, improved warning box.
 * **Level 3 Storm Tracks & Markers:** Integrated Level 3 storm tracks data. Added new Hail and TVS (Tornado Vortex Signature) markers that spawn dynamically at the echo top of storm cells, complete with altitude readings (ft AGL).
+* **Spatial Weather Audio:** Added immersive 3D spatialized rain and hail audio to the environment.
 * **3D Drawing & Laser Tools:** Introduced a new 3D drawing tool to annotate the environment and an adjustable laser pointer for precise VR controller interactions.
 * **Elevation & Customization:** Added elevation exaggeration settings that dynamically adjust the 3D map and radar site positioning. Introduced opacity settings and a performance throttler.
 * **Legal & UI Updates:** Added a legal disclaimer screen with persistence. Included color table support, updated the UI typography, and fixed various map tool collision bugs.

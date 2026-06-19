@@ -68,4 +68,6 @@ private:
     std::atomic<bool> bIsProcessing{false};
 
     void InitializeAudioComponents();
+
+    class AStormAttributeManager* CachedStormMgr = nullptr;
 };

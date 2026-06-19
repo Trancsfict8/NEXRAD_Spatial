@@ -16,9 +16,6 @@ void Tile::SetCallback(std::function<void()> callback){
 }
 
 Tile::~Tile(){
-	if(isAlive) {
-		*isAlive = false;
-	}
 	if(data != NULL){
 		delete[] data;
 	}
@@ -31,9 +28,8 @@ TileProvider::TileProvider(std::string name, std::string url, std::string imageT
 	this->maxZoom = maxZoom;
 }
 
-Tile *TileProvider::GetTile(int zoom, int y, int x){
-	Tile* tile = new Tile();
-	tile->isAlive = std::make_shared<bool>(true);
+std::shared_ptr<Tile> TileProvider::GetTile(int zoom, int y, int x){
+	std::shared_ptr<Tile> tile = std::make_shared<Tile>();
 	tile->tileProvider = this;
 	if(zoom > maxZoom){
 		return tile;
@@ -109,12 +105,7 @@ Tile *TileProvider::GetTile(int zoom, int y, int x){
 	HttpRequest->SetURL(fUrl);
 	HttpRequest->SetHeader("User-Agent", "OpenStormVR/1.0");
 
-	std::shared_ptr<bool> alive = tile->isAlive;
-	HttpRequest->OnProcessRequestComplete().BindLambda([tile, alive, this](FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful) {
-		if (!alive || !(*alive)) {
-			// Tile was deleted before request completed
-			return;
-		}
+	HttpRequest->OnProcessRequestComplete().BindLambda([tile, this](FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful) {
 		if (bWasSuccessful && Response.IsValid() && Response->GetResponseCode() == 200) {
 			const TArray<uint8>& ResponseData = Response->GetContent();
 			if (ResponseData.Num() > 0) {

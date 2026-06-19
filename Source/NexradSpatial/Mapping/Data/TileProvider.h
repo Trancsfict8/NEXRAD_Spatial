@@ -1,6 +1,7 @@
 #include <string>
 #include <functional>
 #include <memory>
+#include <mutex>
 #include "HTTPRequest.h"
 
 class TileProvider;
@@ -8,7 +9,6 @@ class Tar;
 
 class Tile{
 public:
-	std::shared_ptr<bool> isAlive;
 	std::function<void()> readyCallback = NULL;
 	bool isReady = false;
 	uint8_t* data = NULL;
@@ -46,7 +46,7 @@ public:
 	// set location of tar file to pull files from
 	void SetTarCache(std::string staticCacheTar);
 	// get a tile for a given location, it needs to be manually deleted
-	Tile* GetTile(int zoom, int y, int x);
+	std::shared_ptr<Tile> GetTile(int zoom, int y, int x);
 	void EventLoop();
 	~TileProvider();
 };
