@@ -1388,6 +1388,46 @@ void ARadarViewPawn::InterrogateSpatialTriggered() {
 		UE_LOG(LogTemp, Warning, TEXT("[DEBUG] Math Intersection Hit! Actor: GlobeSphere"));
 		fprintf(stdout, "[DEBUG] Math Intersection Hit! Actor: GlobeSphere\n");
 		if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, TEXT("Globe Mathematically Intersected!"));
+	} else {
+		// Mathematical Raymarch against true terrain to fix any physics collision offsets
+		if (GS && GS->globalState.globe) {
+			FVector StartPos = hitLocation - RayDir * 50.0f; 
+			FVector EndPos = hitLocation + RayDir * 50.0f;
+			
+			// Clamp StartPos so it's not behind the controller
+			if (FVector::DotProduct(StartPos - RayOrigin, RayDir) < 0) {
+				StartPos = RayOrigin;
+			}
+			
+			bool bFoundTerrainHit = false;
+			FVector TerrainHitLoc = hitLocation;
+			
+			int steps = 100;
+			for (int i = 0; i < steps; i++) {
+				FVector p1 = FMath::Lerp(StartPos, EndPos, (float)i / steps);
+				FVector p2 = FMath::Lerp(StartPos, EndPos, (float)(i + 1) / steps);
+				
+				SimpleVector3<double> c1 = globe->GetLatLonAltDegrees(SimpleVector3<double>(p1.X, p1.Y, p1.Z));
+				SimpleVector3<double> c2 = globe->GetLatLonAltDegrees(SimpleVector3<double>(p2.X, p2.Y, p2.Z));
+				
+				double h1 = ElevationData::GetDataAtPointRadians(c1.radius() * M_PI / 180.0, c1.theta() * M_PI / 180.0) * GS->globalState.elevationExaggeration;
+				double h2 = ElevationData::GetDataAtPointRadians(c2.radius() * M_PI / 180.0, c2.theta() * M_PI / 180.0) * GS->globalState.elevationExaggeration;
+				
+				if (c1.phi() >= h1 && c2.phi() <= h2) {
+					double t = (c1.phi() - h1) / ((c1.phi() - h1) - (c2.phi() - h2));
+					TerrainHitLoc = p1 + (p2 - p1) * t;
+					bFoundTerrainHit = true;
+					break;
+				}
+			}
+			
+			if (bFoundTerrainHit) {
+				hitLocation = TerrainHitLoc;
+				UE_LOG(LogTemp, Warning, TEXT("[DEBUG] Found true terrain hit mathematically!"));
+			} else {
+				UE_LOG(LogTemp, Warning, TEXT("[DEBUG] Mathematical terrain hit failed, using physics hit."));
+			}
+		}
 	}
 
 	SimpleVector3<double> point(hitLocation.X, hitLocation.Y, hitLocation.Z);
