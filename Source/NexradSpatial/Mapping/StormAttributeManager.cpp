@@ -279,8 +279,12 @@ void AStormAttributeManager::UpdateMeshes()
     
     for (const FStormAttr& attr : currentAttributes) {
         if (attr.type == TEXT("TVS") && globalState->showLevel3StormAttributes) {
-            // Position TVS higher so it hovers above any hail sphere
-            SimpleVector3<double> loc = globalState->globe->GetPointScaledDegrees(attr.lat, attr.lon, 15000 * globalState->elevationExaggeration);
+            // Position TVS higher so it hovers above any hail sphere and text
+            float altitudeMeters = (attr.top > 0.0f) ? (attr.top * 1000.0f * 0.3048f) : 12192.0f;
+            
+            // TVS cone points down (rotated 180). With scale 0.8, it's 8000m tall.
+            // Placing its base at altitude + 13500m puts its tip at altitude + 5500m (just above hail text at 4500m).
+            SimpleVector3<double> loc = globalState->globe->GetPointScaledDegrees(attr.lat, attr.lon, (altitudeMeters + 13500.0f) * globalState->elevationExaggeration);
             FTransform transform;
             transform.SetLocation(FVector(loc.x, loc.y, loc.z));
             
@@ -297,13 +301,15 @@ void AStormAttributeManager::UpdateMeshes()
 
             FTransform transform;
             transform.SetLocation(FVector(loc.x, loc.y, loc.z));
-            transform.SetScale3D(FVector(0.5f)); // 0.5 scale * 100 unit sphere * 100m/unit = 5km wide spheres
 
             if (attr.maxSize >= 2.0f) {
+                transform.SetScale3D(FVector(0.35f)); // Large = Red, 3.5km wide
                 HailLargeMeshComponent->AddInstance(transform);
             } else if (attr.maxSize >= 1.0f) {
+                transform.SetScale3D(FVector(0.25f)); // Medium = Yellow, 2.5km wide
                 HailMediumMeshComponent->AddInstance(transform);
             } else {
+                transform.SetScale3D(FVector(0.15f)); // Small = Green, 1.5km wide
                 HailSmallMeshComponent->AddInstance(transform);
             }
             
