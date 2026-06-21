@@ -130,6 +130,19 @@ public:
 	bool discordPresence = true; // if discord presence is enabled
 	int radarCacheSize = 75; // number of volumes that can 
 	
+	// Historical Mode variables
+	bool historicalMode = false;
+	bool historicalDownloading = false;
+	int historicalYear = 2024;
+	int historicalMonth = 1;
+	int historicalDay = 1;
+	int historicalStartHour = 0;
+	int historicalEndHour = 23;
+	int historicalDownloadTotal = 0;
+	int historicalDownloadProgress = 0;
+	std::vector<std::string> availableHistoricalSessions = {};
+	bool refreshHistoricalSessions = true;
+	
 	// user defined waypoints for the globe
 	std::vector<Waypoint> locationMarkers = {};
 	

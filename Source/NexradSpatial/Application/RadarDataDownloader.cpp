@@ -356,6 +356,117 @@ public:
 	}
 };
 
+class HistoricalDownloaderTask : public AsyncTaskRunner {
+public:
+	std::string siteId;
+	int year;
+	int month;
+	int day;
+	int startHour;
+	int endHour;
+	std::string outputPath;
+	GlobalState* globalState;
+
+	void Task() override {
+		SystemAPI::CreateDirectory(outputPath);
+		
+		char prefix[256];
+		snprintf(prefix, sizeof(prefix), "%04d/%02d/%02d/%s/", year, month, day, siteId.c_str());
+		
+		std::string listUrl = "https://s3.amazonaws.com/unidata-nexrad-level2/?list-type=2&prefix=" + std::string(prefix);
+		
+		HTTPDownloader listDownloader;
+		listDownloader.timeout = 30.0f;
+		listDownloader.MakeRequest(listUrl, &canceled);
+		fprintf(stderr, "AWS List URL: %s\n", listUrl.c_str());
+		if(listDownloader.success && listDownloader.bufferSize > 0) {
+			std::string xml((char*)listDownloader.buffer, listDownloader.bufferSize);
+			fprintf(stderr, "AWS XML Response (first 500 chars): %s\n", xml.substr(0, std::min<size_t>(500, xml.length())).c_str());
+			size_t keyPos = 0;
+			std::vector<std::string> keys;
+			while((keyPos = xml.find("<Key>", keyPos)) != std::string::npos) {
+				keyPos += 5;
+				size_t keyEnd = xml.find("</Key>", keyPos);
+				if(keyEnd != std::string::npos) {
+					std::string key = xml.substr(keyPos, keyEnd - keyPos);
+					keys.push_back(key);
+				}
+			}
+			
+			std::vector<std::string> targetFiles;
+			for(const std::string& key : keys) {
+				if(key.find(siteId) != std::string::npos && key.find("_MDM") == std::string::npos) {
+					size_t underscore = key.find('_');
+					if(underscore != std::string::npos && key.length() > underscore + 2) {
+						try {
+							int hour = std::stoi(key.substr(underscore + 1, 2));
+							if(hour >= startHour && hour <= endHour) {
+								targetFiles.push_back(key);
+							}
+						} catch(...) {
+							targetFiles.push_back(key);
+						}
+					} else {
+						targetFiles.push_back(key);
+					}
+				}
+			}
+			
+			if (globalState) {
+				globalState->historicalDownloadTotal = targetFiles.size();
+				globalState->historicalDownloadProgress = 0;
+			}
+			
+			for(const std::string& key : targetFiles) {
+				if(canceled) break;
+				
+				size_t lastSlash = key.find_last_of('/');
+				std::string filename = key.substr(lastSlash + 1);
+				std::string filePath = outputPath + filename;
+				
+				size_t existingSize = SystemAPI::GetFileStats(filePath).size;
+				if(existingSize > 0) {
+					continue;
+				}
+				
+				HTTPDownloader fileDownloader;
+				fileDownloader.outputFile = filePath;
+				fileDownloader.timeout = 120.0f;
+				std::string fileUrl = "https://s3.amazonaws.com/unidata-nexrad-level2/" + key;
+				fileDownloader.MakeRequest(fileUrl, &canceled);
+				
+				if (globalState) {
+					globalState->historicalDownloadProgress++;
+				}
+			}
+		}
+		if (globalState) {
+			globalState->historicalDownloading = false;
+		}
+	}
+};
+
+class HistoricalSessionsListTask : public AsyncTaskRunner {
+public:
+	std::string basePath;
+	GlobalState* globalState;
+	
+	void Task() override {
+		SystemAPI::CreateDirectory(basePath);
+		auto files = SystemAPI::ReadDirectory(basePath);
+		std::vector<std::string> found;
+		for(const auto& file : files) {
+			if(file.isDirectory && file.name != "." && file.name != "..") {
+				found.push_back(file.name);
+			}
+		}
+		std::sort(found.begin(), found.end(), std::greater<std::string>());
+		if (globalState) {
+			globalState->availableHistoricalSessions = found;
+		}
+	}
+};
+
 // Sets default values
 ARadarDataDownloader::ARadarDataDownloader()
 {
@@ -384,6 +495,14 @@ void ARadarDataDownloader::EndPlay(const EEndPlayReason::Type endPlayReason) {
 		downloaderTask->Delete();
 		downloaderTask = NULL;
 	}
+	if(historicalTask != NULL){
+		historicalTask->Delete();
+		historicalTask = NULL;
+	}
+	if(listTask != NULL){
+		listTask->Delete();
+		listTask = NULL;
+	}
 	Super::EndPlay(endPlayReason);
 }
 
@@ -394,7 +513,80 @@ void ARadarDataDownloader::Tick(float DeltaTime)
 	
 	if (ARadarGameStateBase* gameState = GetWorld()->GetGameState<ARadarGameStateBase>()) {
 		GlobalState* globalState = &gameState->globalState;
-		if(globalState->downloadData == true){
+		
+		if (currentActiveSiteId == "") {
+			currentActiveSiteId = globalState->downloadSiteId;
+		} else if (currentActiveSiteId != globalState->downloadSiteId) {
+			if (globalState->historicalMode) {
+				globalState->historicalMode = false;
+				globalState->historicalDownloading = false;
+				globalState->downloadData = true;
+				globalState->pollData = true;
+				if (historicalTask != NULL) {
+					historicalTask->Cancel();
+				}
+				globalState->warningPopupText = "Historical mode cancelled. Switched back to live data.";
+				globalState->showWarningPopup = true;
+			}
+			currentActiveSiteId = globalState->downloadSiteId;
+		}
+		
+		if (globalState->historicalMode && globalState->historicalDownloading) {
+			if (historicalTask == NULL) {
+				historicalTask = new HistoricalDownloaderTask();
+				historicalTask->siteId = globalState->downloadSiteId;
+				historicalTask->year = globalState->historicalYear;
+				historicalTask->month = globalState->historicalMonth;
+				historicalTask->day = globalState->historicalDay;
+				historicalTask->startHour = globalState->historicalStartHour;
+				historicalTask->endHour = globalState->historicalEndHour;
+				historicalTask->globalState = globalState;
+				
+				char pathBuf[256];
+				snprintf(pathBuf, sizeof(pathBuf), "Data/Historical/%s_%04d_%02d_%02d/", historicalTask->siteId.c_str(), historicalTask->year, historicalTask->month, historicalTask->day);
+				historicalTask->outputPath = StringUtils::GetUserPath(std::string(pathBuf));
+				
+				historicalTask->Start();
+				fprintf(stderr, "Starting historical downloader for %s\n", historicalTask->siteId.c_str());
+				globalState->EmitEvent("LoadDirectory", historicalTask->outputPath, NULL);
+			} else if (historicalTask->siteId != globalState->downloadSiteId) {
+				// If the user clicks another radar site, cancel the download and go back to viewing live radar data
+				globalState->historicalDownloading = false;
+				globalState->historicalMode = false;
+				globalState->downloadData = true; // Go back to live radar
+				globalState->pollData = true;
+				
+				globalState->warningPopupText = "Historical download cancelled. Switched back to live data.";
+				globalState->showWarningPopup = true;
+				
+				historicalTask->Cancel();
+			}
+		}
+		
+		if (!globalState->historicalDownloading && historicalTask != NULL) {
+			historicalTask->Delete();
+			historicalTask = NULL;
+			globalState->refreshHistoricalSessions = true;
+		}
+		
+		if (globalState->refreshHistoricalSessions) {
+			globalState->refreshHistoricalSessions = false;
+			if (listTask != NULL) {
+				listTask->Delete();
+				listTask = NULL;
+			}
+			listTask = new HistoricalSessionsListTask();
+			listTask->basePath = StringUtils::GetUserPath(std::string("Data/Historical/"));
+			listTask->globalState = globalState;
+			listTask->Start();
+		}
+		
+		if (listTask != NULL && listTask->finished) {
+			listTask->Delete();
+			listTask = NULL;
+		}
+		
+		if(globalState->downloadData == true && !globalState->historicalMode){
 			if(downloaderTask == NULL){
 				downloaderTask = new RadarDownloaderTask();
 			}
@@ -421,7 +613,7 @@ void ARadarDataDownloader::Tick(float DeltaTime)
 				globalState->EmitEvent("LoadDirectory", downloaderTask->outputPath, NULL);
 			}
 		}
-		if(globalState->downloadData == false && downloaderTask != NULL){
+		if((globalState->downloadData == false || globalState->historicalMode) && downloaderTask != NULL){
 			downloaderTask->Delete();
 			downloaderTask = NULL;
 		}

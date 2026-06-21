@@ -5,6 +5,7 @@
 #include "../Radar/Products/RadarProduct.h"
 #include "../Radar/Globe.h"
 #include "../Radar/NexradSites/NexradSites.h"
+#include "../Radar/RadarCollection.h"
 #include "../Objects/RadarGameStateBase.h"
 #include "../Objects/RadarViewPawn.h"
 #include "../Objects/WeatherAudioManager.h"
@@ -313,6 +314,15 @@ void ImGuiUI::MainUI()
 		float frameHeight = ImGui::GetFrameHeight();
 		float fontSize = ImGui::GetFontSize();
 		ImVec2 squareButtonSize = ImVec2(frameHeight, frameHeight);
+		
+		if (globalState.historicalDownloading) {
+			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.5f, 0.0f, 1.0f));
+			ImGui::SetWindowFontScale(1.5f);
+			ImGui::TextWrapped("DOWNLOADING HISTORICAL DATA... THIS MAY TAKE A WHILE.");
+			ImGui::SetWindowFontScale(1.0f);
+			ImGui::PopStyleColor();
+			ImGui::Separator();
+		}
 		
 		if (ImGui::CollapsingHeader("Basic", ImGuiTreeNodeFlags_DefaultOpen)) {
 			ImGui::PushButtonRepeat(true);
@@ -692,9 +702,95 @@ void ImGuiUI::MainUI()
 						CustomTextInput("Data URL", &globalState.downloadUrl, &globalState.defaults->downloadUrl);
 						ImGui::TreePop();
 					}
-					
 					ImGui::TreePop();
 				}
+				
+				if (ImGui::TreeNodeEx("Historical Archive", ImGuiTreeNodeFlags_SpanAvailWidth)) {
+					ImGui::TextWrapped("Station ID is linked to the currently selected radar site: %s", globalState.downloadSiteId.c_str());
+					
+					ImGui::PushItemWidth(6 * fontSize);
+					ImGui::InputInt("Year", &globalState.historicalYear);
+					ImGui::InputInt("Month", &globalState.historicalMonth);
+					ImGui::InputInt("Day", &globalState.historicalDay);
+					if (ImGui::InputInt("Start Hour", &globalState.historicalStartHour)) {
+						globalState.historicalStartHour = FMath::Clamp(globalState.historicalStartHour, 0, 23);
+						if (globalState.historicalEndHour < globalState.historicalStartHour) globalState.historicalEndHour = globalState.historicalStartHour;
+					}
+					if (ImGui::InputInt("End Hour", &globalState.historicalEndHour)) {
+						globalState.historicalEndHour = FMath::Clamp(globalState.historicalEndHour, 0, 23);
+						if (globalState.historicalStartHour > globalState.historicalEndHour) globalState.historicalStartHour = globalState.historicalEndHour;
+					}
+					ImGui::PopItemWidth();
+					
+					if (globalState.historicalDownloading) {
+						if (globalState.historicalDownloadTotal > 0) {
+							ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), "DOWNLOADING HISTORICAL DATA... (%d/%d)", globalState.historicalDownloadProgress, globalState.historicalDownloadTotal);
+						} else {
+							ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), "DOWNLOADING HISTORICAL DATA...");
+						}
+						ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), "THIS MAY TAKE A WHILE.");
+					} else if (globalState.historicalMode) {
+						ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), "WARNING: YOU ARE VIEWING HISTORICAL DATA.");
+						ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), "LIVE DATA UPDATES ARE DISABLED.");
+					}
+
+					if (globalState.historicalDownloading) {
+						ImGui::BeginDisabled();
+					}
+					if (ImGui::Button("Download Historical Data")) {
+						globalState.historicalMode = true;
+						globalState.historicalDownloading = true;
+						globalState.downloadData = false;
+						globalState.pollData = false;
+					}
+					if (globalState.historicalDownloading) {
+						ImGui::EndDisabled();
+						ImGui::SameLine();
+						if (ImGui::Button("Cancel Download")) {
+							globalState.historicalDownloading = false;
+							globalState.historicalMode = false;
+						}
+					}
+					
+					if (globalState.historicalMode && !globalState.historicalDownloading && globalState.refRadarCollection != NULL) {
+						int totalFiles = globalState.refRadarCollection->GetTotalFiles();
+						if (totalFiles > 0) {
+							int currentIndex = globalState.refRadarCollection->GetCurrentIndex();
+							ImGui::Text("Scrub Time:");
+							if (ImGui::SliderInt("##Scrub", &currentIndex, 0, totalFiles - 1)) {
+								size_t index = currentIndex;
+								globalState.EmitEvent("JumpToIndex", "", &index);
+							}
+						}
+					}
+					
+					ImGui::Separator();
+					ImGui::Text("Previously Downloaded Sessions:");
+					if (ImGui::BeginChild("HistoricalSessions", ImVec2(0, 150), true)) {
+						for (const std::string& session : globalState.availableHistoricalSessions) {
+							if (ImGui::Selectable(session.c_str())) {
+								globalState.historicalMode = true;
+								globalState.historicalDownloading = false;
+								globalState.downloadData = false;
+								globalState.pollData = false;
+								
+								// Extract the site ID from the session string (e.g. "KTLX_2013_05_20")
+								size_t underscore = session.find('_');
+								if (underscore != std::string::npos) {
+									globalState.downloadSiteId = session.substr(0, underscore);
+								}
+								
+								std::string path = StringUtils::GetUserPath("Data/Historical/" + session + "/");
+								globalState.EmitEvent("LoadDirectory", path, NULL);
+							}
+						}
+						ImGui::EndChild();
+					}
+					
+					ImGui::TextWrapped("Note: To clear historical data, navigate to %s and delete the folders inside.", StringUtils::GetUserPath(std::string("Data/Historical/")).c_str());
+					ImGui::TreePop();
+				}
+				
 				ImGui::TreePop();
 			}
 			ImGui::Separator();

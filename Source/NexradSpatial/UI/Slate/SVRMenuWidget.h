@@ -29,7 +29,8 @@ private:
 		Map,
 		Settings,
 		Legal,
-		Controls
+		Controls,
+		Historical
 	};
 
 	EVRMenuTab ActiveTab;
@@ -39,9 +40,15 @@ private:
 
 	GlobalState* GetGlobalState();
 
+	virtual void Tick(const FGeometry& AllottedGeometry, const double InCurrentTime, const float InDeltaTime) override;
+
+	TSharedPtr<SScrollBox> HistoricalScrollBox;
+	size_t LastHistoricalSessionsCount = 0;
+
 	// UI Helpers for VR-sized hit targets
 	TSharedRef<SWidget> MakeLabel(const FString& Text);
 	TSharedRef<SWidget> MakeSlider(const FString& Label, TFunction<float()> GetVal, TFunction<void(float)> SetVal, FString FormatStr);
+	TSharedRef<SWidget> MakeIntSlider(const FString& Label, TFunction<int()> GetVal, TFunction<void(int)> SetVal, int Min, TFunction<int()> GetMax);
 	TSharedRef<SWidget> MakeCheckbox(const FString& Label, TFunction<bool()> GetVal, TFunction<void(bool)> SetVal);
 
 	TSharedRef<SWidget> BuildRadarTab();
@@ -50,4 +57,5 @@ private:
 	TSharedRef<SWidget> BuildSettingsTab();
 	TSharedRef<SWidget> BuildLegalTab();
 	TSharedRef<SWidget> BuildControlsTab();
+	TSharedRef<SWidget> BuildHistoricalTab();
 };

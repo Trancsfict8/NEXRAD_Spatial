@@ -121,6 +121,9 @@ public:
 	// gets current index in the data folder
 	int GetCurrentIndex();
 	
+	// gets total files in the data folder
+	int GetTotalFiles() { return radarFiles.size(); }
+	
 	// visually describe the state of the cache in the console
 	void LogState();
 	

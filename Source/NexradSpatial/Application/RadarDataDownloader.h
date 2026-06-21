@@ -1,11 +1,14 @@
 #pragma once
 
+#include <string>
 #include <vector>
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "RadarDataDownloader.generated.h"
 
 class RadarDownloaderTask;
+class HistoricalDownloaderTask;
+class HistoricalSessionsListTask;
 
 UCLASS()
 class NEXRADSPATIAL_API ARadarDataDownloader : public AActor
@@ -26,5 +29,8 @@ public:
 	virtual void Tick(float DeltaTime) override;
 	
 	RadarDownloaderTask* downloaderTask = NULL;
+	HistoricalDownloaderTask* historicalTask = NULL;
+	HistoricalSessionsListTask* listTask = NULL;
 	std::vector<uint64_t> callbackIds = {};
+	std::string currentActiveSiteId = "";
 };

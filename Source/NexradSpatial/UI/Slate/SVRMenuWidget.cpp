@@ -27,6 +27,8 @@
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 #include "../../Radar/Products/RadarProduct.h"
+#include "../../Radar/RadarCollection.h"
+#include "../../EngineHelpers/StringUtils.h"
 
 BEGIN_SLATE_FUNCTION_BUILD_OPTIMIZATION
 
@@ -163,6 +165,15 @@ void SVRMenuWidget::Construct(const FArguments& InArgs)
 						[ SNew(STextBlock).Text(FText::FromString("Controls")).Font(TabFont()).Justification(ETextJustify::Center).Margin(FMargin(0, 12)) ]
 					]
 				]
+				+ SHorizontalBox::Slot().FillWidth(1)
+				[
+					SNew(SBox).HeightOverride(60.0f)
+					[
+						SNew(SButton)
+						.OnClicked_Lambda([this]() { ActiveTab = EVRMenuTab::Historical; Invalidate(EInvalidateWidgetReason::Layout); return FReply::Handled(); })
+						[ SNew(STextBlock).Text(FText::FromString("Archive")).Font(TabFont()).Justification(ETextJustify::Center).Margin(FMargin(0, 12)) ]
+					]
+				]
 			]
 
 			// ── Content area (scrollable) ────────────────────────────────
@@ -245,6 +256,18 @@ void SVRMenuWidget::Construct(const FArguments& InArgs)
 						.Visibility_Lambda([this]() { return ActiveTab == EVRMenuTab::Controls ? EVisibility::Visible : EVisibility::Collapsed; })
 						[
 							BuildControlsTab()
+						]
+					]
+
+					// ── HISTORICAL TAB ────────────────────────────────────
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					.Padding(FMargin(12, 8))
+					[
+						SNew(SBox)
+						.Visibility_Lambda([this]() { return ActiveTab == EVRMenuTab::Historical ? EVisibility::Visible : EVisibility::Collapsed; })
+						[
+							BuildHistoricalTab()
 						]
 					]
 				]
@@ -1015,6 +1038,222 @@ TSharedRef<SWidget> SVRMenuWidget::BuildControlsTab()
 		];
 }
 // ────────────────────────────────────────────────────────────────────────────
+// HISTORICAL TAB
+// ────────────────────────────────────────────────────────────────────────────
+
+TSharedRef<SWidget> SVRMenuWidget::MakeIntSlider(const FString& Label, TFunction<int()> GetVal, TFunction<void(int)> SetVal, int Min, TFunction<int()> GetMax)
+{
+	static FSliderStyle VRSliderStyle = FCoreStyle::Get().GetWidgetStyle<FSliderStyle>("Slider");
+	static bool bStyleInitialized = false;
+	if (!bStyleInitialized) {
+		VRSliderStyle.NormalThumbImage.ImageSize = FVector2D(64, 64);
+		VRSliderStyle.HoveredThumbImage.ImageSize = FVector2D(72, 72);
+		VRSliderStyle.DisabledThumbImage.ImageSize = FVector2D(64, 64);
+		VRSliderStyle.BarThickness = 16.0f;
+		bStyleInitialized = true;
+	}
+
+	return SNew(SVerticalBox)
+		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
+		[
+			SNew(STextBlock)
+			.Text_Lambda([Label, GetVal]() {
+				return FText::Format(FText::FromString("{0}: {1}"), FText::FromString(Label), FText::AsNumber(GetVal()));
+			})
+			.Font(LabelFont())
+			.ColorAndOpacity(DimText())
+		]
+		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,0,0,16))
+		[
+			SNew(SBox)
+			.HeightOverride(80.0f)
+			.Padding(FMargin(16, 0))
+			[
+				SNew(SSlider)
+				.Style(&VRSliderStyle)
+				.Value_Lambda([GetVal, Min, GetMax]() { 
+					int Max = GetMax();
+					if (Max <= Min) return 0.0f;
+					return (float)(GetVal() - Min) / (float)(Max - Min); 
+				})
+				.OnValueChanged_Lambda([SetVal, Min, GetMax](float v) { 
+					int Max = GetMax();
+					if (Max > Min) SetVal(Min + (int)(v * (Max - Min) + 0.5f)); 
+				})
+				.MinValue(0.0f).MaxValue(1.0f)
+			]
+		];
+}
+
+TSharedRef<SWidget> SVRMenuWidget::BuildHistoricalTab()
+{
+	return SNew(SScrollBox)
+		+ SScrollBox::Slot().Padding(10.0f)
+		[
+			SNew(SVerticalBox)
+			+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0, 8))
+			[
+				MakeLabel(TEXT("Historical Archive"))
+			]
+			+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0, 4))
+			[
+				SNew(STextBlock)
+				.Text_Lambda([this]() {
+					GlobalState* GS = GetGlobalState();
+					FString Alert = FString::Printf(TEXT("Station ID is linked to the selected radar site: %s"), UTF8_TO_TCHAR(GS ? GS->downloadSiteId.c_str() : ""));
+					if (GS && GS->historicalDownloading) {
+						if (GS->historicalDownloadTotal > 0) {
+							Alert += FString::Printf(TEXT("\n\nDOWNLOADING HISTORICAL DATA... (%d/%d)\nTHIS MAY TAKE A WHILE."), GS->historicalDownloadProgress, GS->historicalDownloadTotal);
+						} else {
+							Alert += TEXT("\n\nDOWNLOADING HISTORICAL DATA...\nTHIS MAY TAKE A WHILE.");
+						}
+					} else if (GS && GS->historicalMode) {
+						Alert += TEXT("\n\nWARNING: YOU ARE VIEWING HISTORICAL DATA.\nLIVE DATA UPDATES ARE DISABLED.");
+					}
+					return FText::FromString(Alert);
+				})
+				.Font(FCoreStyle::GetDefaultFontStyle("Regular", 16))
+				.ColorAndOpacity_Lambda([this]() {
+					GlobalState* GS = GetGlobalState();
+					if (GS && (GS->historicalDownloading || GS->historicalMode)) return FSlateColor(FLinearColor(1.0f, 0.5f, 0.0f, 1.0f));
+					return FSlateColor(FLinearColor::White);
+				})
+				.AutoWrapText(true)
+			]
+			+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0, 16))
+			[
+				MakeIntSlider(TEXT("Year"),
+					[this]() { GlobalState* GS = GetGlobalState(); return GS ? GS->historicalYear : 2023; },
+					[this](int Val) { GlobalState* GS = GetGlobalState(); if(GS) GS->historicalYear = Val; },
+					1990, []() { return 2030; }
+				)
+			]
+			+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0, 8))
+			[
+				MakeIntSlider(TEXT("Month"),
+					[this]() { GlobalState* GS = GetGlobalState(); return GS ? GS->historicalMonth : 1; },
+					[this](int Val) { GlobalState* GS = GetGlobalState(); if(GS) GS->historicalMonth = Val; },
+					1, []() { return 12; }
+				)
+			]
+			+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0, 8))
+			[
+				MakeIntSlider(TEXT("Day"),
+					[this]() { GlobalState* GS = GetGlobalState(); return GS ? GS->historicalDay : 1; },
+					[this](int Val) { GlobalState* GS = GetGlobalState(); if(GS) GS->historicalDay = Val; },
+					1, []() { return 31; }
+				)
+			]
+			+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0, 8))
+			[
+				MakeIntSlider(TEXT("Start Hour"),
+					[this]() { GlobalState* GS = GetGlobalState(); return GS ? GS->historicalStartHour : 0; },
+					[this](int Val) { 
+						GlobalState* GS = GetGlobalState(); 
+						if(GS) { 
+							GS->historicalStartHour = Val; 
+							if (GS->historicalEndHour < Val) GS->historicalEndHour = Val;
+						} 
+					},
+					0, []() { return 23; }
+				)
+			]
+			+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0, 8))
+			[
+				MakeIntSlider(TEXT("End Hour"),
+					[this]() { GlobalState* GS = GetGlobalState(); return GS ? GS->historicalEndHour : 23; },
+					[this](int Val) { 
+						GlobalState* GS = GetGlobalState(); 
+						if(GS) { 
+							GS->historicalEndHour = Val; 
+							if (GS->historicalStartHour > Val) GS->historicalStartHour = Val;
+						} 
+					},
+					0, []() { return 23; }
+				)
+			]
+			+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0, 16))
+			[
+				SNew(SButton)
+				.ContentPadding(FMargin(16))
+				.IsEnabled_Lambda([this]() { GlobalState* GS = GetGlobalState(); return GS && !GS->historicalDownloading; })
+				.OnClicked_Lambda([this]() {
+					GlobalState* GS = GetGlobalState();
+					if (GS) {
+						GS->historicalMode = true;
+						GS->historicalDownloading = true;
+						GS->downloadData = false;
+						GS->pollData = false;
+					}
+					return FReply::Handled();
+				})
+				[ SNew(STextBlock).Text(FText::FromString("Download Historical Data")).Font(TabFont()).Justification(ETextJustify::Center) ]
+			]
+			+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0, 8))
+			[
+				SNew(SButton)
+				.ContentPadding(FMargin(16))
+				.IsEnabled_Lambda([this]() { GlobalState* GS = GetGlobalState(); return GS && GS->historicalDownloading; })
+				.OnClicked_Lambda([this]() {
+					GlobalState* GS = GetGlobalState();
+					if (GS) {
+						GS->historicalDownloading = false;
+						GS->historicalMode = false;
+					}
+					return FReply::Handled();
+				})
+				[ SNew(STextBlock).Text(FText::FromString("Cancel Download")).Font(TabFont()).Justification(ETextJustify::Center) ]
+			]
+			+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0, 16))
+			[
+				SNew(SBox)
+				.Visibility_Lambda([this]() {
+					GlobalState* GS = GetGlobalState();
+					return (GS && GS->historicalMode && !GS->historicalDownloading && GS->refRadarCollection && GS->refRadarCollection->GetTotalFiles() > 0) ? EVisibility::Visible : EVisibility::Collapsed;
+				})
+				[
+					MakeIntSlider(TEXT("Scrub Time"),
+						[this]() { GlobalState* GS = GetGlobalState(); return (GS && GS->refRadarCollection) ? GS->refRadarCollection->GetCurrentIndex() : 0; },
+						[this](int Val) {
+							GlobalState* GS = GetGlobalState();
+							if (GS && GS->refRadarCollection) {
+								size_t index = (size_t)Val;
+								GS->EmitEvent("JumpToIndex", "", &index);
+							}
+						},
+						0, [this]() { GlobalState* GS = GetGlobalState(); return (GS && GS->refRadarCollection) ? FMath::Max(0, GS->refRadarCollection->GetTotalFiles() - 1) : 0; }
+					)
+				]
+			]
+			+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0, 16))
+			[
+				SNew(STextBlock)
+				.Text(FText::FromString("Previously Downloaded Sessions:"))
+				.Font(FCoreStyle::GetDefaultFontStyle("Bold", 16))
+			]
+			+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0, 8))
+			[
+				SNew(SBox)
+				.HeightOverride(150.0f)
+				[
+					SAssignNew(HistoricalScrollBox, SScrollBox)
+				]
+			]
+			+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0, 16))
+			[
+				SNew(STextBlock)
+				.Text_Lambda([this]() {
+					FString path = FString(StringUtils::GetUserPath(std::string("Data/Historical/")).c_str());
+					return FText::FromString("Note: To clear historical data, navigate to\n" + path + "\nand delete the folders inside.");
+				})
+				.Font(FCoreStyle::GetDefaultFontStyle("Regular", 12))
+				.ColorAndOpacity(DimText())
+				.AutoWrapText(true)
+			]
+		];
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 // GlobalState accessor (cached per-frame via world context)
 // ────────────────────────────────────────────────────────────────────────────
 GlobalState* SVRMenuWidget::GetGlobalState()
@@ -1029,6 +1268,49 @@ GlobalState* SVRMenuWidget::GetGlobalState()
 		}
 	}
 	return nullptr;
+}
+
+void SVRMenuWidget::Tick(const FGeometry& AllottedGeometry, const double InCurrentTime, const float InDeltaTime)
+{
+	SCompoundWidget::Tick(AllottedGeometry, InCurrentTime, InDeltaTime);
+	
+	GlobalState* GS = GetGlobalState();
+	if (GS && HistoricalScrollBox.IsValid()) {
+		if (GS->availableHistoricalSessions.size() != LastHistoricalSessionsCount) {
+			LastHistoricalSessionsCount = GS->availableHistoricalSessions.size();
+			HistoricalScrollBox->ClearChildren();
+			for (const std::string& session : GS->availableHistoricalSessions) {
+				HistoricalScrollBox->AddSlot()
+				.Padding(4.0f)
+				[
+					SNew(SButton)
+					.ContentPadding(FMargin(8))
+					.OnClicked_Lambda([this, session]() {
+						GlobalState* InnerGS = GetGlobalState();
+						if (InnerGS) {
+							InnerGS->historicalMode = true;
+							InnerGS->historicalDownloading = false;
+							InnerGS->downloadData = false;
+							InnerGS->pollData = false;
+							
+							// Extract the site ID from the session string (e.g. "KTLX_2013_05_20")
+							size_t underscore = session.find('_');
+							if (underscore != std::string::npos) {
+								InnerGS->downloadSiteId = session.substr(0, underscore);
+							}
+							
+							std::string path = StringUtils::GetUserPath("Data/Historical/" + session + "/");
+							InnerGS->EmitEvent("LoadDirectory", path, NULL);
+						}
+						return FReply::Handled();
+					})
+					[
+						SNew(STextBlock).Text(FText::FromString(session.c_str())).Font(LabelFont()).Justification(ETextJustify::Center)
+					]
+				];
+			}
+		}
+	}
 }
 
 END_SLATE_FUNCTION_BUILD_OPTIMIZATION

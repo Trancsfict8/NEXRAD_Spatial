@@ -548,7 +548,7 @@ void ARadarVolumeRender::Tick(float DeltaTime)
 	radarCollection->automaticallyAdvance = globalState->animate;
 	radarCollection->autoAdvanceInterval = 1.0f / globalState->animateSpeed;
 	radarCollection->holdOnLastFrameInterval = globalState->animateHoldEnd;
-	radarCollection->poll = globalState->pollData;
+	radarCollection->poll = globalState->pollData || globalState->historicalMode;
 	switch(globalState->animateLoopMode){
 		case GlobalState::LOOP_MODE_DEFAULT:
 			radarCollection->autoAdvanceEndOption = RadarCollection::AnimationEndJumpCache;
