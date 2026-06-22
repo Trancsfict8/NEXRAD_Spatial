@@ -42,7 +42,10 @@ private:
 
 	virtual void Tick(const FGeometry& AllottedGeometry, const double InCurrentTime, const float InDeltaTime) override;
 
+	TSharedPtr<STextBlock> HoveredComponentText;
+	
 	TSharedPtr<SScrollBox> HistoricalScrollBox;
+	TSharedPtr<SScrollBox> HistoricalTabRootScrollBox;
 	size_t LastHistoricalSessionsCount = 0;
 
 	// UI Helpers for VR-sized hit targets

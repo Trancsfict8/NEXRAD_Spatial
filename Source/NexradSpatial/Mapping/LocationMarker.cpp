@@ -127,6 +127,14 @@ void ALocationMarker::OnClick(){
 			GlobalState* globalState = &gameMode->globalState;
 			UE_LOG(LogTemp, Warning, TEXT("Set radar site to %s"), *FString(data.c_str()));
 			globalState->downloadSiteId = data;
+			if (globalState->historicalMode) {
+				globalState->historicalMode = false;
+				globalState->historicalDownloading = false;
+				globalState->downloadData = true;
+				globalState->pollData = true;
+				globalState->warningPopupText = "Historical mode cancelled. Switched back to live data.";
+				globalState->showWarningPopup = true;
+			}
 			globalState->downloadData = true;
 			globalState->pollData = true;
 			

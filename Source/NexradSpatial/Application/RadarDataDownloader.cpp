@@ -517,17 +517,6 @@ void ARadarDataDownloader::Tick(float DeltaTime)
 		if (currentActiveSiteId == "") {
 			currentActiveSiteId = globalState->downloadSiteId;
 		} else if (currentActiveSiteId != globalState->downloadSiteId) {
-			if (globalState->historicalMode) {
-				globalState->historicalMode = false;
-				globalState->historicalDownloading = false;
-				globalState->downloadData = true;
-				globalState->pollData = true;
-				if (historicalTask != NULL) {
-					historicalTask->Cancel();
-				}
-				globalState->warningPopupText = "Historical mode cancelled. Switched back to live data.";
-				globalState->showWarningPopup = true;
-			}
 			currentActiveSiteId = globalState->downloadSiteId;
 		}
 		

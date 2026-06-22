@@ -517,11 +517,19 @@ void ImGuiUI::MainUI()
 							nearestSite = site;
 						}
 					}
-					if(nearestSite != NULL){
+					if (nearestSite != NULL && minDistance < 200) {
 						globalState.downloadSiteId = nearestSite->name;
-						globalState.downloadData = true;
-						globalState.pollData = true;
+						if (globalState.historicalMode) {
+							globalState.historicalMode = false;
+							globalState.historicalDownloading = false;
+							globalState.downloadData = true;
+							globalState.pollData = true;
+							globalState.warningPopupText = "Historical mode cancelled. Switched back to live data.";
+							globalState.showWarningPopup = true;
+						}
 					}
+					globalState.downloadData = true;
+					globalState.pollData = true;
 					
 					globalState.EmitEvent("TeleportCamera");
 				}
@@ -688,6 +696,14 @@ void ImGuiUI::MainUI()
 						if (ImGui::Button("OK", ImVec2(120,0))) {
 							ImGui::CloseCurrentPopup();
 							globalState.downloadSiteId = siteIdSelection;
+							if (globalState.historicalMode) {
+								globalState.historicalMode = false;
+								globalState.historicalDownloading = false;
+								globalState.downloadData = true;
+								globalState.pollData = true;
+								globalState.warningPopupText = "Historical mode cancelled. Switched back to live data.";
+								globalState.showWarningPopup = true;
+							}
 						}
 						ImGui::SameLine();
 						if (ImGui::Button("Cancel", ImVec2(120,0))) {
@@ -706,21 +722,13 @@ void ImGuiUI::MainUI()
 				}
 				
 				if (ImGui::TreeNodeEx("Historical Archive", ImGuiTreeNodeFlags_SpanAvailWidth)) {
-					ImGui::TextWrapped("Station ID is linked to the currently selected radar site: %s", globalState.downloadSiteId.c_str());
+					static bool scrollHistoricalTabToTop = false;
+					if (scrollHistoricalTabToTop) {
+						ImGui::SetScrollHereY(0.0f);
+						scrollHistoricalTabToTop = false;
+					}
 					
-					ImGui::PushItemWidth(6 * fontSize);
-					ImGui::InputInt("Year", &globalState.historicalYear);
-					ImGui::InputInt("Month", &globalState.historicalMonth);
-					ImGui::InputInt("Day", &globalState.historicalDay);
-					if (ImGui::InputInt("Start Hour", &globalState.historicalStartHour)) {
-						globalState.historicalStartHour = FMath::Clamp(globalState.historicalStartHour, 0, 23);
-						if (globalState.historicalEndHour < globalState.historicalStartHour) globalState.historicalEndHour = globalState.historicalStartHour;
-					}
-					if (ImGui::InputInt("End Hour", &globalState.historicalEndHour)) {
-						globalState.historicalEndHour = FMath::Clamp(globalState.historicalEndHour, 0, 23);
-						if (globalState.historicalStartHour > globalState.historicalEndHour) globalState.historicalStartHour = globalState.historicalEndHour;
-					}
-					ImGui::PopItemWidth();
+					ImGui::TextWrapped("Station ID is linked to the currently selected radar site: %s", globalState.downloadSiteId.c_str());
 					
 					if (globalState.historicalDownloading) {
 						if (globalState.historicalDownloadTotal > 0) {
@@ -730,9 +738,36 @@ void ImGuiUI::MainUI()
 						}
 						ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), "THIS MAY TAKE A WHILE.");
 					} else if (globalState.historicalMode) {
-						ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), "WARNING: YOU ARE VIEWING HISTORICAL DATA.");
-						ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), "LIVE DATA UPDATES ARE DISABLED.");
+						int totalFiles = globalState.refRadarCollection ? globalState.refRadarCollection->GetTotalFiles() : 0;
+						if (totalFiles > 0) {
+							ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), "WARNING: YOU ARE VIEWING HISTORICAL DATA.");
+							ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), "LIVE DATA UPDATES ARE DISABLED.");
+							
+							int currentIndex = globalState.refRadarCollection->GetCurrentIndex();
+							ImGui::Text("Scrub Time:");
+							if (ImGui::SliderInt("##Scrub", &currentIndex, 0, totalFiles - 1)) {
+								size_t index = currentIndex;
+								globalState.EmitEvent("JumpToIndex", "", &index);
+							}
+						} else {
+							ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "LOADING ARCHIVE DATA FROM DISK...");
+							ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "The time scrubber will be available when loaded.");
+						}
 					}
+
+					ImGui::PushItemWidth(6 * fontSize);
+					ImGui::InputInt("Year", &globalState.historicalYear);
+					ImGui::InputInt("Month", &globalState.historicalMonth);
+					ImGui::InputInt("Day", &globalState.historicalDay);
+					if (ImGui::InputInt("Start Hour (UTC)", &globalState.historicalStartHour)) {
+						globalState.historicalStartHour = FMath::Clamp(globalState.historicalStartHour, 0, 23);
+						if (globalState.historicalEndHour < globalState.historicalStartHour) globalState.historicalEndHour = globalState.historicalStartHour;
+					}
+					if (ImGui::InputInt("End Hour (UTC)", &globalState.historicalEndHour)) {
+						globalState.historicalEndHour = FMath::Clamp(globalState.historicalEndHour, 0, 23);
+						if (globalState.historicalStartHour > globalState.historicalEndHour) globalState.historicalStartHour = globalState.historicalStartHour;
+					}
+					ImGui::PopItemWidth();
 
 					if (globalState.historicalDownloading) {
 						ImGui::BeginDisabled();
@@ -742,6 +777,15 @@ void ImGuiUI::MainUI()
 						globalState.historicalDownloading = true;
 						globalState.downloadData = false;
 						globalState.pollData = false;
+						
+						for(size_t i = 0; i < NexradSites::numberOfSites; i++){
+							if (NexradSites::sites[i].name == globalState.downloadSiteId) {
+								globalState.teleportLatitude = NexradSites::sites[i].latitude;
+								globalState.teleportLongitude = NexradSites::sites[i].longitude;
+								globalState.EmitEvent("TeleportCamera");
+								break;
+							}
+						}
 					}
 					if (globalState.historicalDownloading) {
 						ImGui::EndDisabled();
@@ -749,18 +793,6 @@ void ImGuiUI::MainUI()
 						if (ImGui::Button("Cancel Download")) {
 							globalState.historicalDownloading = false;
 							globalState.historicalMode = false;
-						}
-					}
-					
-					if (globalState.historicalMode && !globalState.historicalDownloading && globalState.refRadarCollection != NULL) {
-						int totalFiles = globalState.refRadarCollection->GetTotalFiles();
-						if (totalFiles > 0) {
-							int currentIndex = globalState.refRadarCollection->GetCurrentIndex();
-							ImGui::Text("Scrub Time:");
-							if (ImGui::SliderInt("##Scrub", &currentIndex, 0, totalFiles - 1)) {
-								size_t index = currentIndex;
-								globalState.EmitEvent("JumpToIndex", "", &index);
-							}
 						}
 					}
 					
@@ -778,10 +810,20 @@ void ImGuiUI::MainUI()
 								size_t underscore = session.find('_');
 								if (underscore != std::string::npos) {
 									globalState.downloadSiteId = session.substr(0, underscore);
+									for(size_t i = 0; i < NexradSites::numberOfSites; i++){
+										if (NexradSites::sites[i].name == globalState.downloadSiteId) {
+											globalState.teleportLatitude = NexradSites::sites[i].latitude;
+											globalState.teleportLongitude = NexradSites::sites[i].longitude;
+											globalState.EmitEvent("TeleportCamera");
+											break;
+										}
+									}
 								}
 								
 								std::string path = StringUtils::GetUserPath("Data/Historical/" + session + "/");
 								globalState.EmitEvent("LoadDirectory", path, NULL);
+								
+								scrollHistoricalTabToTop = true;
 							}
 						}
 						ImGui::EndChild();

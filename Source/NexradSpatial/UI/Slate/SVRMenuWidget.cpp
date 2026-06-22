@@ -574,6 +574,14 @@ TSharedRef<SWidget> SVRMenuWidget::BuildGPSTab()
 				.OnClicked_Lambda([this, SiteName]() {
 					if (GlobalState* gs = GetGlobalState()) {
 						gs->downloadSiteId = std::string(TCHAR_TO_UTF8(*SiteName));
+					if (gs->historicalMode) {
+						gs->historicalMode = false;
+						gs->historicalDownloading = false;
+						gs->downloadData = true;
+						gs->pollData = true;
+						gs->warningPopupText = "Historical mode cancelled. Switched back to live data.";
+						gs->showWarningPopup = true;
+					}
 						gs->downloadData = true;
 						gs->pollData = true;
 					}
@@ -1087,7 +1095,7 @@ TSharedRef<SWidget> SVRMenuWidget::MakeIntSlider(const FString& Label, TFunction
 
 TSharedRef<SWidget> SVRMenuWidget::BuildHistoricalTab()
 {
-	return SNew(SScrollBox)
+	return SAssignNew(HistoricalTabRootScrollBox, SScrollBox)
 		+ SScrollBox::Slot().Padding(10.0f)
 		[
 			SNew(SVerticalBox)
@@ -1108,7 +1116,12 @@ TSharedRef<SWidget> SVRMenuWidget::BuildHistoricalTab()
 							Alert += TEXT("\n\nDOWNLOADING HISTORICAL DATA...\nTHIS MAY TAKE A WHILE.");
 						}
 					} else if (GS && GS->historicalMode) {
-						Alert += TEXT("\n\nWARNING: YOU ARE VIEWING HISTORICAL DATA.\nLIVE DATA UPDATES ARE DISABLED.");
+						int totalFiles = GS->refRadarCollection ? GS->refRadarCollection->GetTotalFiles() : 0;
+						if (totalFiles > 0) {
+							Alert += TEXT("\n\nWARNING: YOU ARE VIEWING HISTORICAL DATA.\nLIVE DATA UPDATES ARE DISABLED.");
+						} else {
+							Alert += TEXT("\n\nLOADING ARCHIVE DATA FROM DISK...\nThe time scrubber will be available when loaded.");
+						}
 					}
 					return FText::FromString(Alert);
 				})
@@ -1119,6 +1132,27 @@ TSharedRef<SWidget> SVRMenuWidget::BuildHistoricalTab()
 					return FSlateColor(FLinearColor::White);
 				})
 				.AutoWrapText(true)
+			]
+			+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0, 16))
+			[
+				SNew(SBox)
+				.Visibility_Lambda([this]() {
+					GlobalState* GS = GetGlobalState();
+					return (GS && GS->historicalMode && !GS->historicalDownloading && GS->refRadarCollection && GS->refRadarCollection->GetTotalFiles() > 0) ? EVisibility::Visible : EVisibility::Collapsed;
+				})
+				[
+					MakeIntSlider(TEXT("Scrub Time"),
+						[this]() { GlobalState* GS = GetGlobalState(); return (GS && GS->refRadarCollection) ? GS->refRadarCollection->GetCurrentIndex() : 0; },
+						[this](int Val) {
+							GlobalState* GS = GetGlobalState();
+							if (GS && GS->refRadarCollection) {
+								size_t index = (size_t)Val;
+								GS->EmitEvent("JumpToIndex", "", &index);
+							}
+						},
+						0, [this]() { GlobalState* GS = GetGlobalState(); return (GS && GS->refRadarCollection) ? FMath::Max(0, GS->refRadarCollection->GetTotalFiles() - 1) : 0; }
+					)
+				]
 			]
 			+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0, 16))
 			[
@@ -1146,7 +1180,7 @@ TSharedRef<SWidget> SVRMenuWidget::BuildHistoricalTab()
 			]
 			+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0, 8))
 			[
-				MakeIntSlider(TEXT("Start Hour"),
+				MakeIntSlider(TEXT("Start Hour (UTC)"),
 					[this]() { GlobalState* GS = GetGlobalState(); return GS ? GS->historicalStartHour : 0; },
 					[this](int Val) { 
 						GlobalState* GS = GetGlobalState(); 
@@ -1160,7 +1194,7 @@ TSharedRef<SWidget> SVRMenuWidget::BuildHistoricalTab()
 			]
 			+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0, 8))
 			[
-				MakeIntSlider(TEXT("End Hour"),
+				MakeIntSlider(TEXT("End Hour (UTC)"),
 					[this]() { GlobalState* GS = GetGlobalState(); return GS ? GS->historicalEndHour : 23; },
 					[this](int Val) { 
 						GlobalState* GS = GetGlobalState(); 
@@ -1184,6 +1218,15 @@ TSharedRef<SWidget> SVRMenuWidget::BuildHistoricalTab()
 						GS->historicalDownloading = true;
 						GS->downloadData = false;
 						GS->pollData = false;
+						
+						for(size_t i = 0; i < NexradSites::numberOfSites; i++){
+							if (NexradSites::sites[i].name == GS->downloadSiteId) {
+								GS->teleportLatitude = NexradSites::sites[i].latitude;
+								GS->teleportLongitude = NexradSites::sites[i].longitude;
+								GS->EmitEvent("TeleportCamera");
+								break;
+							}
+						}
 					}
 					return FReply::Handled();
 				})
@@ -1203,27 +1246,6 @@ TSharedRef<SWidget> SVRMenuWidget::BuildHistoricalTab()
 					return FReply::Handled();
 				})
 				[ SNew(STextBlock).Text(FText::FromString("Cancel Download")).Font(TabFont()).Justification(ETextJustify::Center) ]
-			]
-			+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0, 16))
-			[
-				SNew(SBox)
-				.Visibility_Lambda([this]() {
-					GlobalState* GS = GetGlobalState();
-					return (GS && GS->historicalMode && !GS->historicalDownloading && GS->refRadarCollection && GS->refRadarCollection->GetTotalFiles() > 0) ? EVisibility::Visible : EVisibility::Collapsed;
-				})
-				[
-					MakeIntSlider(TEXT("Scrub Time"),
-						[this]() { GlobalState* GS = GetGlobalState(); return (GS && GS->refRadarCollection) ? GS->refRadarCollection->GetCurrentIndex() : 0; },
-						[this](int Val) {
-							GlobalState* GS = GetGlobalState();
-							if (GS && GS->refRadarCollection) {
-								size_t index = (size_t)Val;
-								GS->EmitEvent("JumpToIndex", "", &index);
-							}
-						},
-						0, [this]() { GlobalState* GS = GetGlobalState(); return (GS && GS->refRadarCollection) ? FMath::Max(0, GS->refRadarCollection->GetTotalFiles() - 1) : 0; }
-					)
-				]
 			]
 			+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0, 16))
 			[
@@ -1297,10 +1319,21 @@ void SVRMenuWidget::Tick(const FGeometry& AllottedGeometry, const double InCurre
 							size_t underscore = session.find('_');
 							if (underscore != std::string::npos) {
 								InnerGS->downloadSiteId = session.substr(0, underscore);
+								for(size_t i = 0; i < NexradSites::numberOfSites; i++){
+									if (NexradSites::sites[i].name == InnerGS->downloadSiteId) {
+										InnerGS->teleportLatitude = NexradSites::sites[i].latitude;
+										InnerGS->teleportLongitude = NexradSites::sites[i].longitude;
+										InnerGS->EmitEvent("TeleportCamera");
+										break;
+									}
+								}
 							}
 							
 							std::string path = StringUtils::GetUserPath("Data/Historical/" + session + "/");
 							InnerGS->EmitEvent("LoadDirectory", path, NULL);
+							if (HistoricalTabRootScrollBox.IsValid()) {
+								HistoricalTabRootScrollBox->ScrollToStart();
+							}
 						}
 						return FReply::Handled();
 					})
