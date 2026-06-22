@@ -3,6 +3,7 @@
 #include "VelocityRelativeProduct.h"
 #include "NormalizedRotationProduct.h"
 #include "RotationProduct.h"
+#include "VerticallyIntegratedLiquidProduct.h"
 
 std::vector<RadarProduct*> RadarProduct::products = {
 	new RadarProductBase(RadarData::VOLUME_REFLECTIVITY, "Reflectivity", "REF"),
@@ -15,6 +16,7 @@ std::vector<RadarProduct*> RadarProduct::products = {
 	new RadarProductStormRelativeVelocity(),
 	new RadarProductNormalizedRotation(),
 	// new RadarProductRotation(),
+	new RadarProductVerticallyIntegratedLiquid(),
 	new RadarProductVelocityDealiasedGroupTest(RadarProduct::CreateDynamicVolumeType()),
 };
 

@@ -259,6 +259,14 @@ RadarColorIndex* RadarColorIndex::GetDefaultColorIndexForData(RadarData* radarDa
 		case RadarData::VOLUME_CORELATION_COEFFICIENT:
 			return &RadarColorIndexCorrelationCoefficient::defaultInstance;
 			break;
+			
+		case RadarData::VOLUME_VERTICALLY_INTEGRATED_LIQUID:
+			return &RadarColorIndexVerticallyIntegratedLiquid::defaultInstance;
+			break;
+			
+		case RadarData::VOLUME_HYDROMETEOR_CLASSIFICATION:
+			return &RadarColorIndexHydrometeorClassification::defaultInstance;
+			break;
 	
 		default:
 			return &RadarColorIndexRelativeHue::defaultInstance;
@@ -411,6 +419,65 @@ RadarColorIndex::Result RadarColorIndexSpectrumWidth::GenerateColorIndex(Params 
 	for (int i = 0; i < 16384; i++) {
 		float value = (i / 16383.0f);
 		result.data[i * 4 + 3] = value;
+	}
+	result.data[3] = 0;
+	return result;
+}
+
+
+RadarColorIndexVerticallyIntegratedLiquid RadarColorIndexVerticallyIntegratedLiquid::defaultInstance = {};
+RadarColorIndex::Result RadarColorIndexVerticallyIntegratedLiquid::GenerateColorIndex(Params params, Result* resultToReuse) {
+	float l = 0;
+	float u = 70;
+	RadarColorIndex::Result result = BasicSetup(l, u, resultToReuse);
+	
+	// Transparent/faint blue for very low VIL
+	colorRangeHSL(result.data, valueToIndex(l,u,0), valueToIndex(l,u,1),  0.66,0.5,0.2,  0.66,0.5,0.4);
+	// Light blue to dark blue (1-10)
+	colorRangeHSL(result.data, valueToIndex(l,u,1), valueToIndex(l,u,10),  0.55,0.8,0.6,  0.66,1,0.5);
+	// Dark blue to green (10-20)
+	colorRangeHSL(result.data, valueToIndex(l,u,10), valueToIndex(l,u,20),  0.66,1,0.5,  0.33,1,0.5);
+	// Green to yellow (20-30)
+	colorRangeHSL(result.data, valueToIndex(l,u,20), valueToIndex(l,u,30),  0.33,1,0.5,  0.166,1,0.5);
+	// Yellow to red (30-45)
+	colorRangeHSL(result.data, valueToIndex(l,u,30), valueToIndex(l,u,45),  0.166,1,0.5,  0,1,0.5);
+	// Red to purple (45-60)
+	colorRangeHSL(result.data, valueToIndex(l,u,45), valueToIndex(l,u,60),  0,1,0.5,  0.83,1,0.5);
+	// Purple to white (60-70)
+	colorRangeHSL(result.data, valueToIndex(l,u,60), valueToIndex(l,u,70),  0.83,1,0.5,  0.83,0,1);
+	
+	for (int i = 0; i < 16384; i++) {
+		float value = (i / 16383.0f);
+		float opacity = 0.0f;
+		
+		if (i >= valueToIndex(l, u, 0.5f)) {
+			opacity = std::clamp(value * 3.0f + 0.3f, 0.0f, 1.0f);
+		}
+		
+		result.data[i * 4 + 3] = opacity;
+	}
+	result.data[3] = 0;
+	return result;
+}
+
+
+RadarColorIndexHydrometeorClassification RadarColorIndexHydrometeorClassification::defaultInstance = {};
+RadarColorIndex::Result RadarColorIndexHydrometeorClassification::GenerateColorIndex(Params params, Result* resultToReuse) {
+	float l = 0;
+	float u = 15;
+	RadarColorIndex::Result result = BasicSetup(l, u, resultToReuse);
+	
+	for (int i = 0; i < 16384; i++) {
+		float value = (i / 16383.0f);
+		float hue = fmod(value * 3.0f, 1.0f);
+		float R = std::clamp(std::abs(hue * 6.0f - 3.0f) - 1.0f, 0.0f, 1.0f);
+		float G = std::clamp(2 - std::abs(hue * 6.0f - 2.0f), 0.0f, 1.0f);
+		float B = std::clamp(2 - std::abs(hue * 6.0f - 4.0f), 0.0f, 1.0f);
+		
+		result.data[i * 4 + 0] = R;
+		result.data[i * 4 + 1] = G;
+		result.data[i * 4 + 2] = B;
+		result.data[i * 4 + 3] = value > 0.05f ? 1.0f : 0.0f;
 	}
 	result.data[3] = 0;
 	return result;

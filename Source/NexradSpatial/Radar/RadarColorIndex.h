@@ -79,6 +79,18 @@ public:
 	static RadarColorIndexSpectrumWidth defaultInstance;
 };
 
+class RadarColorIndexVerticallyIntegratedLiquid : public RadarColorIndex {
+public:
+	virtual Result GenerateColorIndex(Params params, Result* resultToReuse) override;
+	static RadarColorIndexVerticallyIntegratedLiquid defaultInstance;
+};
+
+class RadarColorIndexHydrometeorClassification : public RadarColorIndex {
+public:
+	virtual Result GenerateColorIndex(Params params, Result* resultToReuse) override;
+	static RadarColorIndexHydrometeorClassification defaultInstance;
+};
+
 class RadarColorIndexRelativeHue : public RadarColorIndex {
 public:
 	virtual Result GenerateColorIndex(Params params, Result* resultToReuse) override;
