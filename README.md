@@ -62,9 +62,11 @@ Nexrad Spatial is built strictly for high-performance spatial analytics. All rad
 For detailed technical documentation on the data structures, UE5.7 upgrade paths, and implementation notes, please see `Architecture.md`.
 
 ## Recent Changelog
+* **Historical Archive Enhancements:** Added intelligent teleportation that instantly transports the camera to the correct radar site when a historical session is loaded. Overhauled the historical UI with auto-scrolling, clear download trackers, and dynamic disk loading feedback.
+* **Map Tile Stability:** Implemented graceful failure handling for map tiles. The system now robustly caches and seamlessly ignores missing or failed tile downloads without crashing or halting the rendering thread.
 * **Interactive NWS Warnings:** Added interactive National Weather Service warning popups. Users can click on warning polygons in VR to view detailed alert information in a larger, improved warning box.
-* **Level 3 Storm Tracks & Markers:** Integrated Level 3 storm tracks data. Added new Hail and TVS (Tornado Vortex Signature) markers that spawn dynamically at the echo top of storm cells, complete with altitude readings (ft AGL).
-* **Spatial Weather Audio:** Added immersive 3D spatialized rain and hail audio to the environment.
+* **Level 3 Storm Tracks & Markers:** Integrated Level 3 storm tracks data. Added new Hail and TVS (Tornado Vortex Signature) markers that spawn dynamically at the echo top of storm cells, complete with altitude readings (ft AGL) and refined map marker accuracy.
+* **Spatial Weather Audio:** Added immersive 3D spatialized rain and hail audio to the environment, and resolved previous audio stuttering issues during heavy storm processing.
 * **3D Drawing & Laser Tools:** Introduced a new 3D drawing tool to annotate the environment and an adjustable laser pointer for precise VR controller interactions.
 * **Elevation & Customization:** Added elevation exaggeration settings that dynamically adjust the 3D map and radar site positioning. Introduced opacity settings and a performance throttler.
 * **Legal & UI Updates:** Added a legal disclaimer screen with persistence. Included color table support, updated the UI typography, and fixed various map tool collision bugs.
