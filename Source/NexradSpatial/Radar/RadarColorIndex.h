@@ -52,7 +52,6 @@ protected:
 	// helper function to initialize result
 	Result BasicSetup(float lowerBound, float upperBound, Result* existingResult);
 	// modify opacity for indexes where the lowest is in the center like velocity 
-	//void ModifyOpacitySymmetric(float opacityMultiplier, float cutoff, Result* existingResult);
 };
 
 class RadarColorIndexReflectivity : public RadarColorIndex {
@@ -64,6 +63,7 @@ public:
 class RadarColorIndexVelocity : public RadarColorIndex {
 public:
 	virtual Result GenerateColorIndex(Params params, Result* resultToReuse) override;
+	virtual void ModifyOpacity(float opacityMultiplier, float cutoff, Result* existingResult) override;
 	static RadarColorIndexVelocity defaultInstance;
 };
 

@@ -341,6 +341,24 @@ RadarColorIndex::Result RadarColorIndexVelocity::GenerateColorIndex(Params param
 	return result;
 }
 
+void RadarColorIndexVelocity::ModifyOpacity(float opacityMultiplier, float cutoff, Result* existingResult)
+{
+	unsigned int halfMax = 8192;
+	unsigned int cutoffAmount = std::min((unsigned int)(cutoff * halfMax), halfMax);
+	
+	for (unsigned int i = halfMax - cutoffAmount; i < halfMax + cutoffAmount; i++) {
+		existingResult->data[i * 4 + 3] = 0;
+	}
+	if(opacityMultiplier != 1.0f){
+		for (unsigned int i = 0; i < halfMax - cutoffAmount; i++) {
+			existingResult->data[i * 4 + 3] = existingResult->data[i * 4 + 3] * opacityMultiplier;
+		}
+		for (unsigned int i = halfMax + cutoffAmount; i < 16384; i++) {
+			existingResult->data[i * 4 + 3] = existingResult->data[i * 4 + 3] * opacityMultiplier;
+		}
+	}
+}
+
 
 RadarColorIndexCorrelationCoefficient RadarColorIndexCorrelationCoefficient::defaultInstance = {};
 RadarColorIndex::Result RadarColorIndexCorrelationCoefficient::GenerateColorIndex(Params params, Result* resultToReuse) {
