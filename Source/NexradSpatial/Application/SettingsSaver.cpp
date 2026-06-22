@@ -188,6 +188,7 @@ void ASettingsSaver::LoadSettings() {
 		LOAD_MACRO_FLOAT(laserDistance);
 		// Settings
 		LOAD_MACRO_BOOL(useImperialUnits);
+		LOAD_MACRO_BOOL(enableStormSounds);
 		LOAD_MACRO_FLOAT(maxFPS);
 		LOAD_MACRO_BOOL(vsync);
 		LOAD_MACRO_FLOAT(quality);
@@ -294,6 +295,7 @@ void ASettingsSaver::SaveSettings() {
 		SAVE_MACRO_FLOAT(laserDistance);
 		// Settings
 		SAVE_MACRO_BOOL(useImperialUnits);
+		SAVE_MACRO_BOOL(enableStormSounds);
 		SAVE_MACRO_FLOAT(maxFPS);
 		SAVE_MACRO_BOOL(vsync);
 		if(globalState->quality != 3){
@@ -358,6 +360,7 @@ void ASettingsSaver::ResetBasicSettings() {
 		// RESET_MACRO(mapBrightness);
 		// Settings
 		// RESET_MACRO(useImperialUnits);
+		// RESET_MACRO(enableStormSounds);
 		// RESET_MACRO(maxFPS);
 		// RESET_MACRO(vsync);
 		// RESET_MACRO(quality);
@@ -443,6 +446,7 @@ void ASettingsSaver::ResetAllSettings() {
 		RESET_MACRO(laserDistance);
 		// Settings
 		RESET_MACRO(useImperialUnits);
+		RESET_MACRO(enableStormSounds);
 		RESET_MACRO(maxFPS);
 		RESET_MACRO(vsync);
 		RESET_MACRO(quality);
