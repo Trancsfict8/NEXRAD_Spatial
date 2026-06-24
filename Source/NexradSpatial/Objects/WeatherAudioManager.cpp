@@ -286,9 +286,9 @@ void UWeatherAudioManager::UpdateAudioState(float DeltaTime, FVector CameraPos)
         RainIntensity = targetRain;
         CoreDensity = targetCore;
 
-        if (GEngine) {
-            GEngine->AddOnScreenDebugMessage(101, 1.0f, FColor::Green, FString::Printf(TEXT("INSIDE VOLUME - Cell Max: %.1f dBZ | Rain: %.2f | Core: %.2f"), localMax, RainIntensity, CoreDensity));
-        }
+        // if (GEngine) {
+        //     GEngine->AddOnScreenDebugMessage(101, 1.0f, FColor::Green, FString::Printf(TEXT("INSIDE VOLUME - Cell Max: %.1f dBZ | Rain: %.2f | Core: %.2f"), localMax, RainIntensity, CoreDensity));
+        // }
 
         // Place audio directly at CameraPos to ensure it is never outside the Attenuation radius.
         if (RainAmbientAudio) RainAmbientAudio->SetWorldLocation(CameraPos);
@@ -303,9 +303,9 @@ void UWeatherAudioManager::UpdateAudioState(float DeltaTime, FVector CameraPos)
         RainIntensity = targetRain;
         CoreDensity = targetCore;
 
-        if (GEngine) {
-            GEngine->AddOnScreenDebugMessage(101, 1.0f, FColor::Yellow, FString::Printf(TEXT("OUTSIDE VOLUME - Fading Out Audio")));
-        }
+        // if (GEngine) {
+        //     GEngine->AddOnScreenDebugMessage(101, 1.0f, FColor::Yellow, FString::Printf(TEXT("OUTSIDE VOLUME - Fading Out Audio")));
+        // }
 
         if (RainAmbientAudio) RainAmbientAudio->SetWorldLocation(CameraPos);
         if (SevereCoreAudio) SevereCoreAudio->SetWorldLocation(CameraPos);

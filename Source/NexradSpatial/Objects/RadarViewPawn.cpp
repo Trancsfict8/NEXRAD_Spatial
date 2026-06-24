@@ -347,7 +347,7 @@ void ARadarViewPawn::Tick(float deltaTime)
 				interrogatorHoldTimer = -9999.0f; // prevent firing multiple times per hold
 				UE_LOG(LogTemp, Warning, TEXT("[DEBUG] Spatial Interrogator 1.0s HOLD REACHED!"));
 				fprintf(stdout, "[DEBUG] Spatial Interrogator 1.0s HOLD REACHED!\n");
-				if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("Spatial Interrogator 1.0s HOLD REACHED!"));
+				// if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("Spatial Interrogator 1.0s HOLD REACHED!"));
 				InterrogateSpatialTriggered();
 			}
 		}
@@ -1254,7 +1254,7 @@ void ARadarViewPawn::InterrogatorPressed() {
 	interrogatorHoldTimer = 0.0f; 
 	UE_LOG(LogTemp, Warning, TEXT("[DEBUG] Spatial Interrogator PRESSED")); 
 	fprintf(stdout, "[DEBUG] Spatial Interrogator PRESSED\n"); 
-	if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, TEXT("Spatial Interrogator PRESSED")); 
+	// if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, TEXT("Spatial Interrogator PRESSED")); 
 }
 
 void ARadarViewPawn::InterrogatorReleased() { 
@@ -1265,7 +1265,7 @@ void ARadarViewPawn::InterrogatorReleased() {
 	interrogatorHoldTimer = 0.0f; 
 	UE_LOG(LogTemp, Warning, TEXT("[DEBUG] Spatial Interrogator RELEASED")); 
 	fprintf(stdout, "[DEBUG] Spatial Interrogator RELEASED\n"); 
-	if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, TEXT("Spatial Interrogator RELEASED")); 
+	// if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, TEXT("Spatial Interrogator RELEASED")); 
 }
 
 void ARadarViewPawn::ButtonBPressed() {
@@ -1287,7 +1287,7 @@ void ARadarViewPawn::ButtonBReleased() {
 		ARadarGameStateBase* GS = GetWorld()->GetGameState<ARadarGameStateBase>();
 		if (GS) {
 			GS->globalState.enableDrawingTool = !GS->globalState.enableDrawingTool;
-			if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Cyan, GS->globalState.enableDrawingTool ? TEXT("Drawing Tool: ON") : TEXT("Drawing Tool: OFF")); 
+			// if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Cyan, GS->globalState.enableDrawingTool ? TEXT("Drawing Tool: ON") : TEXT("Drawing Tool: OFF")); 
 		}
 	}
 }
@@ -1361,18 +1361,18 @@ void ARadarViewPawn::ClearAllLines() {
 	for (AActor* Actor : FoundActors) {
 		Actor->Destroy();
 	}
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("All Lines Cleared"));
+	// if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("All Lines Cleared"));
 }
 
 void ARadarViewPawn::InterrogateSpatialTriggered() {
 	UE_LOG(LogTemp, Warning, TEXT("[DEBUG] InterrogateSpatialTriggered Executing..."));
 	fprintf(stdout, "[DEBUG] InterrogateSpatialTriggered Executing...\n");
-	if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Cyan, TEXT("InterrogateSpatial Executing..."));
+	// if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Cyan, TEXT("InterrogateSpatial Executing..."));
 
 	if (!widgetInteraction) {
 		UE_LOG(LogTemp, Error, TEXT("[DEBUG] widgetInteraction is NULL!"));
 		fprintf(stdout, "[DEBUG] widgetInteraction is NULL!\n");
-		if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("widgetInteraction is NULL!"));
+		// if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("widgetInteraction is NULL!"));
 		return;
 	}
 
@@ -1401,7 +1401,7 @@ void ARadarViewPawn::InterrogateSpatialTriggered() {
 			hitLocation = traceHit.Location;
 			bHitMap = true;
 			UE_LOG(LogTemp, Warning, TEXT("[DEBUG] LineTrace Hit MapMesh at %f %f %f"), hitLocation.X, hitLocation.Y, hitLocation.Z);
-			if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("Laser Hit Map Surface"));
+			// if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("Laser Hit Map Surface"));
 		}
 	}
 
@@ -1412,7 +1412,7 @@ void ARadarViewPawn::InterrogateSpatialTriggered() {
 		if (tca < 0) {
 			UE_LOG(LogTemp, Error, TEXT("[DEBUG] Laser is pointing AWAY from the globe! tca: %f"), tca);
 			fprintf(stdout, "[DEBUG] Laser is pointing AWAY from the globe!\n");
-			if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Laser Pointing Away from Globe"));
+			// if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Laser Pointing Away from Globe"));
 			return;
 		}
 
@@ -1422,7 +1422,7 @@ void ARadarViewPawn::InterrogateSpatialTriggered() {
 		if (d2 > radius2) {
 			UE_LOG(LogTemp, Error, TEXT("[DEBUG] Laser missed the globe entirely! d2: %f, r2: %f"), d2, radius2);
 			fprintf(stdout, "[DEBUG] Laser missed the globe entirely!\n");
-			if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Laser Missed Globe"));
+			// if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Laser Missed Globe"));
 			return;
 		}
 
@@ -1443,7 +1443,7 @@ void ARadarViewPawn::InterrogateSpatialTriggered() {
 		
 		UE_LOG(LogTemp, Warning, TEXT("[DEBUG] Math Intersection Hit! Actor: GlobeSphere"));
 		fprintf(stdout, "[DEBUG] Math Intersection Hit! Actor: GlobeSphere\n");
-		if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, TEXT("Globe Mathematically Intersected!"));
+		// if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, TEXT("Globe Mathematically Intersected!"));
 	} else {
 		// Mathematical Raymarch against true terrain to fix any physics collision offsets
 		if (GS && GS->globalState.globe) {
@@ -1494,7 +1494,7 @@ void ARadarViewPawn::InterrogateSpatialTriggered() {
 
 	UE_LOG(LogTemp, Warning, TEXT("[DEBUG] Coords extracted: Lat %f, Lon %f"), lat, lon);
 	fprintf(stdout, "[DEBUG] Coords extracted: Lat %f, Lon %f\n", lat, lon);
-	if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Yellow, FString::Printf(TEXT("Lat: %f, Lon: %f"), lat, lon));
+	// if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Yellow, FString::Printf(TEXT("Lat: %f, Lon: %f"), lat, lon));
 
 	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = FHttpModule::Get().CreateRequest();
 		
@@ -1506,7 +1506,7 @@ void ARadarViewPawn::InterrogateSpatialTriggered() {
 			fprintf(stdout, "[DEBUG] API Request completely failed!\n");
 			AsyncTask(ENamedThreads::GameThread, [WeakThis]() {
 				if (WeakThis.IsValid()) {
-					if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("API Request Failed"));
+					// if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("API Request Failed"));
 					WeakThis->inspectorTooltip->SetText(FText::FromString(TEXT("API Request Failed")));
 					WeakThis->inspectorTooltipShadow->SetText(FText::FromString(TEXT("API Request Failed")));
 				}
