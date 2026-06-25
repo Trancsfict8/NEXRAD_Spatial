@@ -125,6 +125,15 @@ void SVRMenuWidget::Construct(const FArguments& InArgs)
 					SNew(SBox).HeightOverride(60.0f)
 					[
 						SNew(SButton)
+						.OnClicked_Lambda([this]() { ActiveTab = EVRMenuTab::Historical; Invalidate(EInvalidateWidgetReason::Layout); return FReply::Handled(); })
+						[ SNew(STextBlock).Text(FText::FromString("Archive")).Font(TabFont()).Justification(ETextJustify::Center).Margin(FMargin(0, 12)) ]
+					]
+				]
+				+ SHorizontalBox::Slot().FillWidth(1)
+				[
+					SNew(SBox).HeightOverride(60.0f)
+					[
+						SNew(SButton)
 						.OnClicked_Lambda([this]() { ActiveTab = EVRMenuTab::GPS; Invalidate(EInvalidateWidgetReason::Layout); return FReply::Handled(); })
 						[ SNew(STextBlock).Text(FText::FromString("GPS")).Font(TabFont()).Justification(ETextJustify::Center).Margin(FMargin(0, 12)) ]
 					]
@@ -154,15 +163,6 @@ void SVRMenuWidget::Construct(const FArguments& InArgs)
 						SNew(SButton)
 						.OnClicked_Lambda([this]() { ActiveTab = EVRMenuTab::Controls; Invalidate(EInvalidateWidgetReason::Layout); return FReply::Handled(); })
 						[ SNew(STextBlock).Text(FText::FromString("Controls")).Font(TabFont()).Justification(ETextJustify::Center).Margin(FMargin(0, 12)) ]
-					]
-				]
-				+ SHorizontalBox::Slot().FillWidth(1)
-				[
-					SNew(SBox).HeightOverride(60.0f)
-					[
-						SNew(SButton)
-						.OnClicked_Lambda([this]() { ActiveTab = EVRMenuTab::Historical; Invalidate(EInvalidateWidgetReason::Layout); return FReply::Handled(); })
-						[ SNew(STextBlock).Text(FText::FromString("Archive")).Font(TabFont()).Justification(ETextJustify::Center).Margin(FMargin(0, 12)) ]
 					]
 				]
 				+ SHorizontalBox::Slot().FillWidth(1)
@@ -588,6 +588,7 @@ TSharedRef<SWidget> SVRMenuWidget::BuildGPSTab()
 	return SNew(SVerticalBox)
 		+ SVerticalBox::Slot().AutoHeight()[ MakeLabel(TEXT("Jump to Coordinates")) ]
 
+#if 0 // Hidden per user request
 		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
 		[
 			MakeSlider(TEXT("Latitude"), 
@@ -611,6 +612,7 @@ TSharedRef<SWidget> SVRMenuWidget::BuildGPSTab()
 				[this](float v) { if (GetGlobalState()) GetGlobalState()->teleportAltitude = v * 20000.0f; }, 
 				TEXT("Alt: {0}"))
 		]
+#endif
 
 		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,8))
 		[
@@ -619,7 +621,7 @@ TSharedRef<SWidget> SVRMenuWidget::BuildGPSTab()
 			[
 				SNew(SBox).HeightOverride(50.0f)[
 					SNew(SButton)
-					.Text(FText::FromString("Get Location"))
+					.Text(FText::FromString("Detect and Go To My Location"))
 					.OnClicked_Lambda([this]() {
 						if (GlobalState* gs = GetGlobalState()) {
 							TSharedRef<IHttpRequest, ESPMode::ThreadSafe> httpRequest = FHttpModule::Get().CreateRequest();
@@ -645,6 +647,7 @@ TSharedRef<SWidget> SVRMenuWidget::BuildGPSTab()
 					})
 				]
 			]
+#if 0 // Hidden per user request
 			+ SHorizontalBox::Slot().FillWidth(1).Padding(FMargin(4,0,4,0))
 			[
 				SNew(SBox).HeightOverride(50.0f)[
@@ -677,6 +680,7 @@ TSharedRef<SWidget> SVRMenuWidget::BuildGPSTab()
 					})
 				]
 			]
+#endif
 		]
 		
 		+ SVerticalBox::Slot().AutoHeight()[ MakeLabel(TEXT("Select Radar Site")) ]
@@ -695,7 +699,7 @@ TSharedRef<SWidget> SVRMenuWidget::BuildGPSTab()
 TSharedRef<SWidget> SVRMenuWidget::BuildMapTab()
 {
 	return SNew(SVerticalBox)
-		+ SVerticalBox::Slot().AutoHeight()[ MakeLabel(TEXT("Map Scale")) ]
+		+ SVerticalBox::Slot().AutoHeight()[ MakeLabel(TEXT("Map Settings")) ]
 
 		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
 		[
