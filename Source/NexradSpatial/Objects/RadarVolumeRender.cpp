@@ -388,7 +388,13 @@ void ARadarVolumeRender::HandleRadarDataEvent(RadarCollection::RadarUpdateEvent 
 		
 		radarColor = RadarColorIndex::GetDefaultColorIndexForData(radarData);
 		
-		UpdateTexture(textureToUpdate, (uint8_t*)radarData->buffer, radarData->fullBufferSize * sizeof(float), sizeof(float));
+		if (radarData->buffer8Bit != NULL) {
+			radarMaterialInstance->SetScalarParameterValue(TEXT("DataMin"), radarData->stats.minValue);
+			radarMaterialInstance->SetScalarParameterValue(TEXT("DataMax"), radarData->stats.maxValue);
+			UpdateTexture(textureToUpdate, radarData->buffer8Bit, radarData->fullBufferSize * sizeof(uint8_t), sizeof(uint8_t));
+		} else {
+			UpdateTexture(textureToUpdate, (uint8_t*)radarData->buffer, radarData->fullBufferSize * sizeof(float), sizeof(float));
+		}
 		
 		// Orient globe to match up with radar
 		//fprintf(stderr, "Location lat:%f lon:%f \n", event.data->stats.latitude, event.data->stats.longitude);
@@ -450,7 +456,7 @@ void ARadarVolumeRender::InitializeTextures() {
 		// nothing changed so no need to reallocate
 		return;
 	}
-	EPixelFormat pixelFormat = PF_R32_FLOAT;
+	EPixelFormat pixelFormat = PF_G8;
 	
 	// immediately begin destroying to free up gpu memory
 	if (volumeTexture2 != NULL) {
@@ -470,8 +476,9 @@ void ARadarVolumeRender::InitializeTextures() {
 		// the volume texture contains an array that is interperted as a three dimensional volume of values
 		// it corresponds to the real values of the radar
 		volumeTexture = UTexture2D::CreateTransient(textureWidth, textureHeight, pixelFormat, TEXT("VolumeTexture1"));
-		//FTexture2DMipMap* MipMap = &(volumeTexture->PlatformData->Mips[0]);
-		//volumeImageData = &(MipMap->BulkData);
+		volumeTexture->CompressionSettings = TC_Grayscale;
+		volumeTexture->SRGB = 0;
+		volumeTexture->Filter = TF_Bilinear;
 		volumeTexture->UpdateResource();
 		radarMaterialInstance->SetTextureParameterValue(TEXT("Volume"), volumeTexture);
 		usePrimaryTexture = true;
@@ -483,8 +490,9 @@ void ARadarVolumeRender::InitializeTextures() {
 		volumeMaterialRenderTarget->Update();
 		
 		volumeTexture2 = UTexture2D::CreateTransient(textureWidth, textureHeight, pixelFormat, TEXT("VolumeTexture2"));
-		//MipMap = &(volumeTexture2->PlatformData->Mips[0]);
-		//volumeImageData2 = &(MipMap->BulkData);
+		volumeTexture2->CompressionSettings = TC_Grayscale;
+		volumeTexture2->SRGB = 0;
+		volumeTexture2->Filter = TF_Bilinear;
 		volumeTexture2->UpdateResource();
 
 		interpolationMaterialInstance->SetScalarParameterValue(TEXT("Amount"), 0);

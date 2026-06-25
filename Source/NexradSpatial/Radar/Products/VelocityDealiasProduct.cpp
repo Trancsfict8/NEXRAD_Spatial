@@ -811,6 +811,22 @@ RadarData* RadarProductVelocityDealiased::deriveVolume(std::map<RadarData::Volum
 			}
 		}
 	}*/
+	
+	// Recalculate min/max values for 8-bit quantization
+	float newMin = INFINITY;
+	float newMax = -INFINITY;
+	for (int i = 0; i < radarData->fullBufferSize; i++) {
+		float val = radarData->buffer[i];
+		if (val != 0 && val != radarData->stats.noDataValue && !std::isnan(val)) {
+			if (val < newMin) newMin = val;
+			if (val > newMax) newMax = val;
+		}
+	}
+	if (newMin == INFINITY) { newMin = -50.0f; newMax = 50.0f; } // Fallback
+	float absMax = std::max(std::abs(newMin), std::abs(newMax));
+	radarData->stats.minValue = -absMax;
+	radarData->stats.maxValue = absMax;
+	
 	radarData->Interpolate();
 	return radarData;
 }

@@ -98,6 +98,27 @@ RadarData* RadarProductStormRelativeVelocity::deriveVolume(std::map<RadarData::V
 	}
 	delete[] bins;
 	
+	// Recalculate min/max values for 8-bit quantization
+	float newMin = INFINITY;
+	float newMax = -INFINITY;
+	for (int sweep = 0; sweep < radarData->sweepBufferCount; sweep++) {
+		for (int theta = 1; theta < radarData->thetaBufferCount + 2; theta++) {
+			if (!radarData->rayInfo[sweep * (radarData->thetaBufferCount + 2) + theta].interpolated) {
+				float* ray = radarData->buffer + (radarData->thetaBufferSize * theta + radarData->sweepBufferSize * sweep);
+				for (int radius = 0; radius < radarData->radiusBufferCount; radius++) {
+					float val = ray[radius];
+					if (val != 0 && val != radarData->stats.noDataValue) {
+						if (val < newMin) newMin = val;
+						if (val > newMax) newMax = val;
+					}
+				}
+			}
+		}
+	}
+	if (newMin == INFINITY) { newMin = -50.0f; newMax = 50.0f; } // Fallback
+	float absMax = std::max(std::abs(newMin), std::abs(newMax));
+	radarData->stats.minValue = -absMax;
+	radarData->stats.maxValue = absMax;
 	
 	radarData->Interpolate();
 	return radarData;

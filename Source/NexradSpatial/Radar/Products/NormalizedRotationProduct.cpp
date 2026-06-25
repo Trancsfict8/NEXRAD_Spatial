@@ -79,8 +79,9 @@ RadarData* RadarProductNormalizedRotation::deriveVolume(std::map<RadarData::Volu
 			}
 		}
 	}
-	radarData->stats.minValue = minValue;
-	radarData->stats.maxValue = std::max(maxValue, 0.0001f);
+	float absMax = std::max(std::abs(minValue), std::abs(maxValue));
+	radarData->stats.minValue = -absMax;
+	radarData->stats.maxValue = absMax;
 	if(inputProducts[RadarData::VOLUME_VELOCITY_DEALIASED]->verbose || true){
 		printf("Normalized Rotation: Min %f, Max %f\n", minValue, maxValue);
 	}

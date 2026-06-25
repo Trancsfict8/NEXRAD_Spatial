@@ -110,14 +110,22 @@ void RadarData::CopyFrom(RadarData* data, bool metadataOnly) {
 		}
 	}
 	if(!metadataOnly){
+		if(data->buffer8Bit != NULL && buffer8Bit == NULL){
+			buffer8Bit = new uint8_t[fullBufferSize];
+		}
+		
 		// copy data
 		if(data->buffer != NULL && data->buffer != buffer){
 			memcpy(buffer, data->buffer, std::min(fullBufferSize, data->usedBufferSize) * sizeof(float));
-		}else if(data->bufferCompressed != NULL){
+		}else if(data->bufferCompressed != NULL && data->buffer8Bit == NULL){
 			SparseCompress::decompressToBuffer(buffer, data->bufferCompressed, fullBufferSize);
 		}
+		
+		if(data->buffer8Bit != NULL && data->buffer8Bit != buffer8Bit){
+			memcpy(buffer8Bit, data->buffer8Bit, fullBufferSize);
+		}
 		// take used buffer size into account
-		if(data->usedBufferSize < usedBufferSize){
+		if(data->usedBufferSize < usedBufferSize && buffer != NULL){
 			// fill newly unused space
 			std::fill(buffer + data->usedBufferSize, buffer + usedBufferSize, data->stats.noDataValue);
 		}
@@ -224,8 +232,33 @@ void RadarData::Compress() {
 		compressedBufferSize = compressorState.sizeAllocated;
 	}
 	if(buffer != NULL){
-		delete buffer;
+		delete[] buffer;
 		buffer = NULL;
+	}
+}
+
+void RadarData::Create8BitBuffer() {
+	if (buffer8Bit != NULL) return;
+	if (buffer == NULL) return; // Need floats to convert
+
+	buffer8Bit = new uint8_t[fullBufferSize];
+	float range = stats.maxValue - stats.minValue;
+	float invRange = (range > 0.0f) ? (254.0f / range) : 0.0f;
+
+	for (int i = 0; i < fullBufferSize; i++) {
+		float val = buffer[i];
+		if (std::isnan(val) || val == stats.noDataValue) {
+			if (stats.noDataValue == 0.0f) {
+				float norm = (0.0f - stats.minValue) * invRange;
+				buffer8Bit[i] = (uint8_t)(1 + FMath::Clamp(FMath::RoundToInt(norm), 0, 254));
+			} else {
+				buffer8Bit[i] = 0;
+			}
+		} else {
+			float norm = (val - stats.minValue) * invRange;
+			int intVal = 1 + FMath::Clamp(FMath::RoundToInt(norm), 0, 254);
+			buffer8Bit[i] = (uint8_t)intVal;
+		}
 	}
 }
 
@@ -397,7 +430,12 @@ int RadarData::MemoryUsage(){
 	if(buffer != NULL){
 		usage += sizeof(float) * fullBufferSize;
 	}
-	usage += sizeof(float) * compressedBufferSize;
+	if(bufferCompressed != NULL){
+		usage += sizeof(float) * compressedBufferSize;
+	}
+	if(buffer8Bit != NULL){
+		usage += sizeof(uint8_t) * fullBufferSize;
+	}
 	if(sweepInfo != NULL){
 		usage += sizeof(SweepInfo) * sweepBufferCount;
 	}
@@ -416,6 +454,10 @@ void RadarData::Deallocate(){
 	if(bufferCompressed != NULL){
 		delete[] bufferCompressed;
 		bufferCompressed = NULL;
+	}
+	if(buffer8Bit != NULL){
+		delete[] buffer8Bit;
+		buffer8Bit = NULL;
 	}
 	if(sweepInfo != NULL){
 		delete[] sweepInfo;

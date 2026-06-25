@@ -70,7 +70,7 @@ void UWeatherAudioManager::InitializeAudioComponents()
 
 void UWeatherAudioManager::OnVolumeUpdate(RadarData* data, FVector InRadarCenter)
 {
-    if (!data || !data->buffer || !data->sweepInfo) return;
+    if (!data || (!data->buffer && !data->buffer8Bit) || !data->sweepInfo) return;
     
     // Only build the audio grid from reflectivity data.
     // Other products (velocity, correlation coefficient, etc.) have completely different
@@ -83,9 +83,18 @@ void UWeatherAudioManager::OnVolumeUpdate(RadarData* data, FVector InRadarCenter
 
     // Make local copies to avoid game thread lifetime issues
     // Using SetNumUninitialized + Memcpy avoids TArray reallocations during Append and is much faster for large arrays
-    TArray<float> LocalBuffer;
-    LocalBuffer.SetNumUninitialized(data->fullBufferSize);
-    FMemory::Memcpy(LocalBuffer.GetData(), data->buffer, data->fullBufferSize * sizeof(float));
+    TArray<uint8_t> LocalBuffer8;
+    TArray<float> LocalBufferFloat;
+    bool bUsing8Bit = false;
+
+    if (data->buffer8Bit != nullptr) {
+        LocalBuffer8.SetNumUninitialized(data->fullBufferSize);
+        FMemory::Memcpy(LocalBuffer8.GetData(), data->buffer8Bit, data->fullBufferSize * sizeof(uint8_t));
+        bUsing8Bit = true;
+    } else {
+        LocalBufferFloat.SetNumUninitialized(data->fullBufferSize);
+        FMemory::Memcpy(LocalBufferFloat.GetData(), data->buffer, data->fullBufferSize * sizeof(float));
+    }
 
     TArray<RadarData::SweepInfo> LocalSweeps;
     LocalSweeps.SetNumUninitialized(data->sweepBufferCount);
@@ -102,7 +111,7 @@ void UWeatherAudioManager::OnVolumeUpdate(RadarData* data, FVector InRadarCenter
 
     // Launch async task
     // MoveTemp the local arrays into the lambda to avoid a secondary expensive allocation + copy of the 100MB buffer
-    Async(EAsyncExecution::ThreadPool, [this, LocalBuffer = MoveTemp(LocalBuffer), LocalSweeps = MoveTemp(LocalSweeps), LocalStats, Center, radiusBufferCount, thetaBufferCount, sweepBufferCount, sweepBufferSize, thetaBufferSize]() {
+    Async(EAsyncExecution::ThreadPool, [this, LocalBuffer8 = MoveTemp(LocalBuffer8), LocalBufferFloat = MoveTemp(LocalBufferFloat), bUsing8Bit, LocalSweeps = MoveTemp(LocalSweeps), LocalStats, Center, radiusBufferCount, thetaBufferCount, sweepBufferCount, sweepBufferSize, thetaBufferSize]() {
         TArray<float> TempGrid;
         TempGrid.Init(-INFINITY, GridResXY * GridResXY * GridResZ);
 
@@ -127,9 +136,18 @@ void UWeatherAudioManager::OnVolumeUpdate(RadarData* data, FVector InRadarCenter
                 float sinAzim = FMath::Sin(azimRad);
 
                 for (int r = 0; r < radiusBufferCount; r++) {
-                    int idx = s * sweepBufferSize + (t + 1) * thetaBufferSize + r;
-                    if (idx >= LocalBuffer.Num()) continue;
-                    float val = LocalBuffer[idx];
+                    int bufferIndex = s * sweepBufferSize + (t + 1) * thetaBufferSize + r;
+                    float val = LocalStats.noDataValue;
+                    if (bUsing8Bit) {
+                        uint8_t intVal = LocalBuffer8[bufferIndex];
+                        if (intVal != 0) {
+                            float range = LocalStats.maxValue - LocalStats.minValue;
+                            float norm = (intVal - 1) / 254.0f;
+                            val = (norm * range) + LocalStats.minValue;
+                        }
+                    } else {
+                        val = LocalBufferFloat[bufferIndex];
+                    }
 
                     if (val == LocalStats.noDataValue || val < 0.0f) continue;
 

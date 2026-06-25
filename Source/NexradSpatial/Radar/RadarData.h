@@ -81,6 +81,9 @@ public:
 	float* bufferCompressed = NULL;
 	// number of elements in the compressed buffer
 	int compressedBufferSize = 0;
+	
+	// 8-bit buffer for texture upload
+	uint8_t* buffer8Bit = NULL;
 
 	struct Stats {
 		// blank distance in pixels between origin and most center pixels of the buffer
@@ -192,6 +195,9 @@ public:
 	// compress the buffer and deallocate the full buffer
 	void Compress();
 	
+	// Create an 8-bit version of the buffer for fast GPU upload
+	void Create8BitBuffer();
+	
 	// decompress into the main buffer but leaves compressed buffer unfreed
 	void Decompress();
 	
@@ -209,6 +215,20 @@ public:
 	
 	//frees all buffers
 	void Deallocate();
+
+	inline float GetValue(int index) {
+		if (buffer != NULL) {
+			return buffer[index];
+		}
+		if (buffer8Bit != NULL) {
+			uint8_t intVal = buffer8Bit[index];
+			if (intVal == 0) return stats.noDataValue;
+			float range = stats.maxValue - stats.minValue;
+			float norm = (intVal - 1) / 254.0f;
+			return (norm * range) + stats.minValue;
+		}
+		return stats.noDataValue;
+	}
 	
 	~RadarData();
 };

@@ -469,7 +469,7 @@ void ARadarViewPawn::Tick(float deltaTime)
 				} else if (currentHoveredMarker) {
 					// Handle radar site click
 					currentHoveredMarker->OnClick();
-				} else {
+				} else if (!globalState->enableDrawingTool) {
 					AGISPolyline* polylineToClick = currentHoveredPolyline;
 					
 					// VR JITTER FIX: If the user clicked but slightly missed the line, do a fat "forgiving" hit test
@@ -731,7 +731,7 @@ void ARadarViewPawn::Tick(float deltaTime)
 										for (int r = FMath::Max(0, radiusIndex - radiusRange); r <= FMath::Min(data->radiusBufferCount - 1, radiusIndex + radiusRange); r++) {
 											int bufferIndex = s * data->sweepBufferSize + (safeT + 1) * data->thetaBufferSize + r;
 											if (bufferIndex >= 0 && bufferIndex < data->fullBufferSize) {
-												float val = data->buffer[bufferIndex];
+												float val = data->GetValue(bufferIndex);
 												if (val != data->stats.noDataValue) {
 													if (!foundData || val > maxVal) {
 														maxVal = val;

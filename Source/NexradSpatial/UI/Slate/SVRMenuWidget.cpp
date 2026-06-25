@@ -152,15 +152,6 @@ void SVRMenuWidget::Construct(const FArguments& InArgs)
 					SNew(SBox).HeightOverride(60.0f)
 					[
 						SNew(SButton)
-						.OnClicked_Lambda([this]() { ActiveTab = EVRMenuTab::Legal; Invalidate(EInvalidateWidgetReason::Layout); return FReply::Handled(); })
-						[ SNew(STextBlock).Text(FText::FromString("Legal")).Font(TabFont()).Justification(ETextJustify::Center).Margin(FMargin(0, 12)) ]
-					]
-				]
-				+ SHorizontalBox::Slot().FillWidth(1)
-				[
-					SNew(SBox).HeightOverride(60.0f)
-					[
-						SNew(SButton)
 						.OnClicked_Lambda([this]() { ActiveTab = EVRMenuTab::Controls; Invalidate(EInvalidateWidgetReason::Layout); return FReply::Handled(); })
 						[ SNew(STextBlock).Text(FText::FromString("Controls")).Font(TabFont()).Justification(ETextJustify::Center).Margin(FMargin(0, 12)) ]
 					]
@@ -172,6 +163,15 @@ void SVRMenuWidget::Construct(const FArguments& InArgs)
 						SNew(SButton)
 						.OnClicked_Lambda([this]() { ActiveTab = EVRMenuTab::Historical; Invalidate(EInvalidateWidgetReason::Layout); return FReply::Handled(); })
 						[ SNew(STextBlock).Text(FText::FromString("Archive")).Font(TabFont()).Justification(ETextJustify::Center).Margin(FMargin(0, 12)) ]
+					]
+				]
+				+ SHorizontalBox::Slot().FillWidth(1)
+				[
+					SNew(SBox).HeightOverride(60.0f)
+					[
+						SNew(SButton)
+						.OnClicked_Lambda([this]() { ActiveTab = EVRMenuTab::Legal; Invalidate(EInvalidateWidgetReason::Layout); return FReply::Handled(); })
+						[ SNew(STextBlock).Text(FText::FromString("Legal")).Font(TabFont()).Justification(ETextJustify::Center).Margin(FMargin(0, 12)) ]
 					]
 				]
 			]
@@ -354,7 +354,7 @@ TSharedRef<SWidget> SVRMenuWidget::BuildRadarTab()
 			int ProdVolType = prod->volumeType;
 			ProductList->AddSlot().Padding(2)
 			[
-				SNew(SBox).HeightOverride(40.0f)[
+				SNew(SBox).HeightOverride(60.0f)[
 					SNew(SButton)
 					.Text(FText::FromString(ProdName))
 					.OnClicked_Lambda([this, ProdVolType]() {
@@ -374,7 +374,7 @@ TSharedRef<SWidget> SVRMenuWidget::BuildRadarTab()
 		+ SVerticalBox::Slot().AutoHeight()[ MakeLabel(TEXT("Data Product")) ]
 		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
 		[
-			SNew(SBox).HeightOverride(150.0f)
+			SNew(SBox).HeightOverride(300.0f)
 			[
 				ProductList
 			]
@@ -530,13 +530,7 @@ TSharedRef<SWidget> SVRMenuWidget::BuildRadarTab()
 				[this](float v) { if (GetGlobalState()) GetGlobalState()->verticalScale = 1.0f + (v * 3.0f); }, 
 				TEXT("Height Exaggeration: {0}"))
 		]
-		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
-		[
-			MakeSlider(TEXT("Elevation Exaggeration"), 
-				[this]() { return GetGlobalState() ? (GetGlobalState()->elevationExaggeration - 1.0f) / 3.0f : 0.0f; },
-				[this](float v) { if (GetGlobalState()) { GetGlobalState()->elevationExaggeration = 1.0f + (v * 3.0f); GetGlobalState()->EmitEvent("GlobeUpdate"); } }, 
-				TEXT("Elevation Exaggeration: {0}"))
-		]
+
 		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
 		[
 			MakeCheckbox(TEXT("Spatial Interpolation"), 
@@ -568,7 +562,7 @@ TSharedRef<SWidget> SVRMenuWidget::BuildGPSTab()
 		FString SiteName = FString(site->name);
 		SiteList->AddSlot().Padding(2)
 		[
-			SNew(SBox).HeightOverride(40.0f)[
+			SNew(SBox).HeightOverride(60.0f)[
 				SNew(SButton)
 				.Text(FText::FromString(SiteName))
 				.OnClicked_Lambda([this, SiteName]() {
@@ -688,7 +682,7 @@ TSharedRef<SWidget> SVRMenuWidget::BuildGPSTab()
 		+ SVerticalBox::Slot().AutoHeight()[ MakeLabel(TEXT("Select Radar Site")) ]
 		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
 		[
-			SNew(SBox).HeightOverride(250.0f)
+			SNew(SBox).HeightOverride(300.0f)
 			[
 				SiteList
 			]
@@ -708,6 +702,14 @@ TSharedRef<SWidget> SVRMenuWidget::BuildMapTab()
 			MakeCheckbox(TEXT("Show Map"), 
 				[this]() { return GetGlobalState() && GetGlobalState()->enableMap; }, 
 				[this](bool v) { if (GetGlobalState()) GetGlobalState()->enableMap = v; })
+		]
+
+		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
+		[
+			MakeSlider(TEXT("Elevation Exaggeration"), 
+				[this]() { return GetGlobalState() ? (GetGlobalState()->elevationExaggeration - 1.0f) / 3.0f : 0.0f; },
+				[this](float v) { if (GetGlobalState()) { GetGlobalState()->elevationExaggeration = 1.0f + (v * 3.0f); GetGlobalState()->EmitEvent("GlobeUpdate"); } }, 
+				TEXT("Elevation Exaggeration: {0}"))
 		]
 
 		+ SVerticalBox::Slot().AutoHeight()[ MakeLabel(TEXT("Map Appearance")) ]
@@ -731,6 +733,22 @@ TSharedRef<SWidget> SVRMenuWidget::BuildMapTab()
 			MakeCheckbox(TEXT("Show Radar Sites"), 
 				[this]() { return GetGlobalState() && GetGlobalState()->enableSiteMarkers; }, 
 				[this](bool v) { if (GetGlobalState()) GetGlobalState()->enableSiteMarkers = v; })
+		]
+
+		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
+		[
+			MakeSlider(TEXT("Map Brightness"), 
+				[this]() { return GetGlobalState() ? GetGlobalState()->mapBrightness : 0.0f; },
+				[this](float v) { if (GetGlobalState()) GetGlobalState()->mapBrightness = v; }, 
+				TEXT("Map Brightness: {0}"))
+		]
+
+		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
+		[
+			MakeSlider(TEXT("GIS Brightness"), 
+				[this]() { return GetGlobalState() ? (GetGlobalState()->mapBrightnessGIS / 1.5f) : 0.0f; },
+				[this](float v) { if (GetGlobalState()) GetGlobalState()->mapBrightnessGIS = v * 1.5f; }, 
+				TEXT("GIS Map Brightness: {0}"))
 		]
 
 		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,12,0,0))[ MakeLabel(TEXT("NWS Active Warnings")) ]
@@ -822,39 +840,7 @@ TSharedRef<SWidget> SVRMenuWidget::BuildSettingsTab()
 				TEXT("Max FPS: {0}"))
 		]
 
-		+ SVerticalBox::Slot().AutoHeight()[ MakeLabel(TEXT("Visuals")) ]
 
-		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
-		[
-			MakeSlider(TEXT("Height Exaggeration"), 
-				[this]() { return GetGlobalState() ? (GetGlobalState()->verticalScale - 1.0f) / 3.0f : 0.0f; },
-				[this](float v) { if (GetGlobalState()) GetGlobalState()->verticalScale = 1.0f + (v * 3.0f); }, 
-				TEXT("Height Exaggeration: {0}x"))
-		]
-
-		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
-		[
-			MakeSlider(TEXT("Elevation Exaggeration"), 
-				[this]() { return GetGlobalState() ? (GetGlobalState()->elevationExaggeration - 1.0f) / 3.0f : 0.0f; },
-				[this](float v) { if (GetGlobalState()) { GetGlobalState()->elevationExaggeration = 1.0f + (v * 3.0f); GetGlobalState()->EmitEvent("GlobeUpdate"); } }, 
-				TEXT("Elevation Exaggeration: {0}x"))
-		]
-
-		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
-		[
-			MakeSlider(TEXT("Map Brightness"), 
-				[this]() { return GetGlobalState() ? GetGlobalState()->mapBrightness : 0.0f; },
-				[this](float v) { if (GetGlobalState()) GetGlobalState()->mapBrightness = v; }, 
-				TEXT("Map Brightness: {0}"))
-		]
-
-		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
-		[
-			MakeSlider(TEXT("GIS Brightness"), 
-				[this]() { return GetGlobalState() ? (GetGlobalState()->mapBrightnessGIS / 1.5f) : 0.0f; },
-				[this](float v) { if (GetGlobalState()) GetGlobalState()->mapBrightnessGIS = v * 1.5f; }, 
-				TEXT("GIS Map Brightness: {0}"))
-		]
 
 		+ SVerticalBox::Slot().AutoHeight()[ MakeLabel(TEXT("Controls & UI")) ]
 
@@ -1256,7 +1242,7 @@ TSharedRef<SWidget> SVRMenuWidget::BuildHistoricalTab()
 			+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0, 8))
 			[
 				SNew(SBox)
-				.HeightOverride(150.0f)
+				.HeightOverride(300.0f)
 				[
 					SAssignNew(HistoricalScrollBox, SScrollBox)
 				]
@@ -1305,9 +1291,11 @@ void SVRMenuWidget::Tick(const FGeometry& AllottedGeometry, const double InCurre
 				HistoricalScrollBox->AddSlot()
 				.Padding(4.0f)
 				[
-					SNew(SButton)
-					.ContentPadding(FMargin(8))
-					.OnClicked_Lambda([this, session]() {
+					SNew(SBox).HeightOverride(60.0f)
+					[
+						SNew(SButton)
+						.ContentPadding(FMargin(8))
+						.OnClicked_Lambda([this, session]() {
 						GlobalState* InnerGS = GetGlobalState();
 						if (InnerGS) {
 							InnerGS->historicalMode = true;
@@ -1339,6 +1327,7 @@ void SVRMenuWidget::Tick(const FGeometry& AllottedGeometry, const double InCurre
 					})
 					[
 						SNew(STextBlock).Text(FText::FromString(session.c_str())).Font(LabelFont()).Justification(ETextJustify::Center)
+					]
 					]
 				];
 			}

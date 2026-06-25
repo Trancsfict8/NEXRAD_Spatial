@@ -210,9 +210,13 @@ public:
 			int productCount = radarHolder->products.size();
 			for(int i = 0; i < productCount && !canceled; i++){
 				auto productHolder = radarHolder->products[i];
-				if(productHolder->radarData != NULL && productHolder->inUse == 0){
+				if(productHolder->radarData != NULL){
 					productHolder->StartUsing();
-					productHolder->radarData->Compress();
+					productHolder->radarData->Decompress();
+					productHolder->radarData->Create8BitBuffer();
+					if (productHolder->inUse == 1) { // 1 because StartUsing increments it
+						productHolder->radarData->Compress();
+					}
 					productHolder->StopUsing();
 				}
 			}

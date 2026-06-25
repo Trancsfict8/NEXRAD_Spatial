@@ -500,6 +500,11 @@ bool OdimH5RadarReader::LoadVolume(RadarData *radarData, RadarData::VolumeType v
 			minValue = 0;
 			maxValue = 1;
 		}
+		if (radarData->stats.volumeType == RadarData::VOLUME_VELOCITY) {
+			float absMax = std::max(std::abs(minValue), std::abs(maxValue));
+			minValue = -absMax;
+			maxValue = absMax;
+		}
 		radarData->stats.minValue = minValue;
 		radarData->stats.maxValue = maxValue;
 		
