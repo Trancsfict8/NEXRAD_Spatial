@@ -553,6 +553,26 @@ void ARadarVolumeRender::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 	double now = SystemAPI::CurrentTime();
 	GlobalState* globalState = &GetWorld()->GetGameState<ARadarGameStateBase>()->globalState;
+	
+	// Safety net for GPU Melter
+	if (globalState->quality == 3) {
+		if (DeltaTime > 0.05f) { // Frame took > 50ms (sub 20 FPS)
+			lowFpsAccumulator += DeltaTime;
+			if (lowFpsAccumulator > 3.0f) { // Sustained for 3 seconds
+				globalState->quality = 0; // Revert to Normal
+				globalState->EmitEvent("UpdateVolumeParameters");
+				lowFpsAccumulator = 0.0f;
+				if (GEngine) {
+					GEngine->AddOnScreenDebugMessage(-1, 10.0f, FColor::Red, TEXT("WARNING: GPU Melter caused severe framerate drop. Quality auto-reverted to Normal."));
+				}
+			}
+		} else {
+			lowFpsAccumulator = 0.0f;
+		}
+	} else {
+		lowFpsAccumulator = 0.0f;
+	}
+
 	radarCollection->automaticallyAdvance = globalState->animate;
 	radarCollection->autoAdvanceInterval = 1.0f / globalState->animateSpeed;
 	radarCollection->holdOnLastFrameInterval = globalState->animateHoldEnd;

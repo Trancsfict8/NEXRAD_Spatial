@@ -868,20 +868,96 @@ TSharedRef<SWidget> SVRMenuWidget::BuildSettingsTab()
 
 		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
 		[
-			MakeSlider(TEXT("Raymarching Step Size"), 
-				[this]() { return GetGlobalState() ? (GetGlobalState()->qualityCustomStepSize - 0.1f) / 19.9f : 0.0f; },
-				[this](float v) { if (GetGlobalState()) GetGlobalState()->qualityCustomStepSize = 0.1f + (v * 19.9f); }, 
-				TEXT("Raymarching Quality Step Size: {0} (Lower is better quality, higher is better FPS)"))
+			SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot().AutoWidth().Padding(0, 0, 16, 0).VAlign(VAlign_Center)
+			[
+				SNew(STextBlock).Text(FText::FromString("Graphics Quality:")).Font(LabelFont()).ColorAndOpacity(DimText())
+			]
+			+ SHorizontalBox::Slot().FillWidth(1.0f)
+			[
+				SNew(SBox)
+				.HeightOverride(48.0f)
+				[
+					SNew(SButton)
+					.HAlign(HAlign_Center)
+					.VAlign(VAlign_Center)
+					.OnClicked_Lambda([this]() {
+						if (!GetGlobalState()) return FReply::Handled();
+						float q = GetGlobalState()->quality;
+						if (q == 10) q = 3;
+						else if (q == 3) q = 2;
+						else if (q == 2) q = 1;
+						else if (q == 1) q = 0;
+						else if (q == 0) q = -1;
+						else if (q == -1) q = -2;
+						else if (q == -2) q = -10;
+						else if (q == -10) q = 10;
+						GetGlobalState()->quality = q;
+						GetGlobalState()->EmitEvent("UpdateVolumeParameters");
+						return FReply::Handled();
+					})
+					[
+						SNew(STextBlock)
+						.Font(LabelFont())
+						.Text_Lambda([this]() {
+							if (!GetGlobalState()) return FText::FromString("Unknown");
+							float q = GetGlobalState()->quality;
+							if (q == 10) return FText::FromString("Custom (Use Slider)");
+							if (q == 3) return FText::FromString("GPU Melter");
+							if (q == 2) return FText::FromString("Very High");
+							if (q == 1) return FText::FromString("High");
+							if (q == 0) return FText::FromString("Normal");
+							if (q == -1) return FText::FromString("Low");
+							if (q == -2) return FText::FromString("Very Low");
+							if (q == -10) return FText::FromString("Potato");
+							return FText::FromString("Unknown");
+						})
+					]
+				]
+			]
 		]
-
+		
 		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
 		[
-			MakeSlider(TEXT("Max FPS"), 
-				[this]() { return GetGlobalState() ? (GetGlobalState()->maxFPS - 20.0f) / 100.0f : 0.0f; },
-				[this](float v) { if (GetGlobalState()) GetGlobalState()->maxFPS = 20.0f + (v * 100.0f); }, 
-				TEXT("Max FPS: {0}"))
+			SNew(SBox)
+			.Visibility_Lambda([this]() { return (GetGlobalState() && GetGlobalState()->quality == 10) ? EVisibility::Visible : EVisibility::Collapsed; })
+			[
+				SNew(SVerticalBox)
+				+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
+				[
+					SNew(STextBlock)
+					.Text_Lambda([this]() { 
+						float val = GetGlobalState() ? GetGlobalState()->qualityCustomStepSize : 5.0f;
+						return FText::FromString(FString::Printf(TEXT("Custom Step Size: %.1f"), val)); 
+					})
+					.Font(LabelFont())
+					.ColorAndOpacity(DimText())
+				]
+				+ SVerticalBox::Slot().AutoHeight()
+				[
+					SNew(SSlider)
+					.Style([]() -> const FSliderStyle* {
+						static FSliderStyle VRSliderStyle = FCoreStyle::Get().GetWidgetStyle<FSliderStyle>("Slider");
+						static bool bStyleInitialized = false;
+						if (!bStyleInitialized) {
+							VRSliderStyle.NormalThumbImage.ImageSize = FVector2D(64, 64);
+							VRSliderStyle.HoveredThumbImage.ImageSize = FVector2D(72, 72);
+							VRSliderStyle.DisabledThumbImage.ImageSize = FVector2D(64, 64);
+							VRSliderStyle.BarThickness = 16.0f;
+							bStyleInitialized = true;
+						}
+						return &VRSliderStyle;
+					}())
+					.Value_Lambda([this]() { return GetGlobalState() ? (GetGlobalState()->qualityCustomStepSize - 0.1f) / 19.9f : 0.0f; })
+					.OnValueChanged_Lambda([this](float v) {
+						if (GetGlobalState()) {
+							GetGlobalState()->qualityCustomStepSize = 0.1f + (v * 19.9f);
+							GetGlobalState()->EmitEvent("UpdateVolumeParameters");
+						}
+					})
+				]
+			]
 		]
-
 
 
 		+ SVerticalBox::Slot().AutoHeight()[ MakeLabel(TEXT("Controls & UI")) ]
@@ -1020,7 +1096,7 @@ TSharedRef<SWidget> SVRMenuWidget::BuildLegalTab()
 		"- License Agreement: This component of the application is distributed under the terms of the GNU General Public License v2. The software is provided \"AS IS\", without warranty of any kind.\n\n"
 		"SOURCE CODE AVAILABILITY:\n"
 		"The complete machine-readable source code for the Nexrad Spatial development project, including all modifications made to the core radar parsing engine, is publicly hosted and freely available to the community. You can view, clone, or download the full repository at:\n"
-		"[INSERT YOUR PUBLIC GITHUB REPOSITORY URL HERE]"
+		"https://github.com/Trancsfict8/NEXRAD_Spatial"
 	);
 
 	return SNew(SVerticalBox)
