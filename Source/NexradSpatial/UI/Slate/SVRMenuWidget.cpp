@@ -868,51 +868,73 @@ TSharedRef<SWidget> SVRMenuWidget::BuildSettingsTab()
 
 		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
 		[
-			SNew(SHorizontalBox)
-			+ SHorizontalBox::Slot().AutoWidth().Padding(0, 0, 16, 0).VAlign(VAlign_Center)
+			SNew(SVerticalBox)
+			+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
 			[
 				SNew(STextBlock).Text(FText::FromString("Graphics Quality:")).Font(LabelFont()).ColorAndOpacity(DimText())
 			]
-			+ SHorizontalBox::Slot().FillWidth(1.0f)
+			+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
 			[
-				SNew(SBox)
-				.HeightOverride(48.0f)
+				SNew(SHorizontalBox)
+				+ SHorizontalBox::Slot().FillWidth(1.0f).Padding(2)
 				[
-					SNew(SButton)
-					.HAlign(HAlign_Center)
-					.VAlign(VAlign_Center)
-					.OnClicked_Lambda([this]() {
-						if (!GetGlobalState()) return FReply::Handled();
-						float q = GetGlobalState()->quality;
-						if (q == 10) q = 3;
-						else if (q == 3) q = 2;
-						else if (q == 2) q = 1;
-						else if (q == 1) q = 0;
-						else if (q == 0) q = -1;
-						else if (q == -1) q = -2;
-						else if (q == -2) q = -10;
-						else if (q == -10) q = 10;
-						GetGlobalState()->quality = q;
-						GetGlobalState()->EmitEvent("UpdateVolumeParameters");
-						return FReply::Handled();
-					})
-					[
-						SNew(STextBlock)
-						.Font(LabelFont())
-						.Text_Lambda([this]() {
-							if (!GetGlobalState()) return FText::FromString("Unknown");
-							float q = GetGlobalState()->quality;
-							if (q == 10) return FText::FromString("Custom (Use Slider)");
-							if (q == 3) return FText::FromString("GPU Melter");
-							if (q == 2) return FText::FromString("Very High");
-							if (q == 1) return FText::FromString("High");
-							if (q == 0) return FText::FromString("Normal");
-							if (q == -1) return FText::FromString("Low");
-							if (q == -2) return FText::FromString("Very Low");
-							if (q == -10) return FText::FromString("Potato");
-							return FText::FromString("Unknown");
-						})
-					]
+					SNew(SButton).HAlign(HAlign_Center).VAlign(VAlign_Center)
+					.OnClicked_Lambda([this]() { if (GetGlobalState()) { GetGlobalState()->quality = -10.0f; GetGlobalState()->EmitEvent("UpdateVolumeParameters"); } return FReply::Handled(); })
+					.ButtonColorAndOpacity_Lambda([this]() { return (GetGlobalState() && GetGlobalState()->quality == -10.0f) ? FLinearColor(0, 0.5f, 1.0f, 1) : FLinearColor::White; })
+					[ SNew(STextBlock).Font(LabelFont()).Text(FText::FromString("Potato")) ]
+				]
+				+ SHorizontalBox::Slot().FillWidth(1.0f).Padding(2)
+				[
+					SNew(SButton).HAlign(HAlign_Center).VAlign(VAlign_Center)
+					.OnClicked_Lambda([this]() { if (GetGlobalState()) { GetGlobalState()->quality = -2.0f; GetGlobalState()->EmitEvent("UpdateVolumeParameters"); } return FReply::Handled(); })
+					.ButtonColorAndOpacity_Lambda([this]() { return (GetGlobalState() && GetGlobalState()->quality == -2.0f) ? FLinearColor(0, 0.5f, 1.0f, 1) : FLinearColor::White; })
+					[ SNew(STextBlock).Font(LabelFont()).Text(FText::FromString("Very Low")) ]
+				]
+				+ SHorizontalBox::Slot().FillWidth(1.0f).Padding(2)
+				[
+					SNew(SButton).HAlign(HAlign_Center).VAlign(VAlign_Center)
+					.OnClicked_Lambda([this]() { if (GetGlobalState()) { GetGlobalState()->quality = -1.0f; GetGlobalState()->EmitEvent("UpdateVolumeParameters"); } return FReply::Handled(); })
+					.ButtonColorAndOpacity_Lambda([this]() { return (GetGlobalState() && GetGlobalState()->quality == -1.0f) ? FLinearColor(0, 0.5f, 1.0f, 1) : FLinearColor::White; })
+					[ SNew(STextBlock).Font(LabelFont()).Text(FText::FromString("Low")) ]
+				]
+				+ SHorizontalBox::Slot().FillWidth(1.0f).Padding(2)
+				[
+					SNew(SButton).HAlign(HAlign_Center).VAlign(VAlign_Center)
+					.OnClicked_Lambda([this]() { if (GetGlobalState()) { GetGlobalState()->quality = 0.0f; GetGlobalState()->EmitEvent("UpdateVolumeParameters"); } return FReply::Handled(); })
+					.ButtonColorAndOpacity_Lambda([this]() { return (GetGlobalState() && GetGlobalState()->quality == 0.0f) ? FLinearColor(0, 0.5f, 1.0f, 1) : FLinearColor::White; })
+					[ SNew(STextBlock).Font(LabelFont()).Text(FText::FromString("Normal")) ]
+				]
+			]
+			+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
+			[
+				SNew(SHorizontalBox)
+				+ SHorizontalBox::Slot().FillWidth(1.0f).Padding(2)
+				[
+					SNew(SButton).HAlign(HAlign_Center).VAlign(VAlign_Center)
+					.OnClicked_Lambda([this]() { if (GetGlobalState()) { GetGlobalState()->quality = 1.0f; GetGlobalState()->EmitEvent("UpdateVolumeParameters"); } return FReply::Handled(); })
+					.ButtonColorAndOpacity_Lambda([this]() { return (GetGlobalState() && GetGlobalState()->quality == 1.0f) ? FLinearColor(0, 0.5f, 1.0f, 1) : FLinearColor::White; })
+					[ SNew(STextBlock).Font(LabelFont()).Text(FText::FromString("High")) ]
+				]
+				+ SHorizontalBox::Slot().FillWidth(1.0f).Padding(2)
+				[
+					SNew(SButton).HAlign(HAlign_Center).VAlign(VAlign_Center)
+					.OnClicked_Lambda([this]() { if (GetGlobalState()) { GetGlobalState()->quality = 2.0f; GetGlobalState()->EmitEvent("UpdateVolumeParameters"); } return FReply::Handled(); })
+					.ButtonColorAndOpacity_Lambda([this]() { return (GetGlobalState() && GetGlobalState()->quality == 2.0f) ? FLinearColor(0, 0.5f, 1.0f, 1) : FLinearColor::White; })
+					[ SNew(STextBlock).Font(LabelFont()).Text(FText::FromString("Very High")) ]
+				]
+				+ SHorizontalBox::Slot().FillWidth(1.0f).Padding(2)
+				[
+					SNew(SButton).HAlign(HAlign_Center).VAlign(VAlign_Center)
+					.OnClicked_Lambda([this]() { if (GetGlobalState()) { GetGlobalState()->quality = 3.0f; GetGlobalState()->EmitEvent("UpdateVolumeParameters"); } return FReply::Handled(); })
+					.ButtonColorAndOpacity_Lambda([this]() { return (GetGlobalState() && GetGlobalState()->quality == 3.0f) ? FLinearColor(0, 0.5f, 1.0f, 1) : FLinearColor::White; })
+					[ SNew(STextBlock).Font(LabelFont()).Text(FText::FromString("GPU Melter")) ]
+				]
+				+ SHorizontalBox::Slot().FillWidth(1.0f).Padding(2)
+				[
+					SNew(SButton).HAlign(HAlign_Center).VAlign(VAlign_Center)
+					.OnClicked_Lambda([this]() { if (GetGlobalState()) { GetGlobalState()->quality = 10.0f; GetGlobalState()->EmitEvent("UpdateVolumeParameters"); } return FReply::Handled(); })
+					.ButtonColorAndOpacity_Lambda([this]() { return (GetGlobalState() && GetGlobalState()->quality == 10.0f) ? FLinearColor(0, 0.5f, 1.0f, 1) : FLinearColor::White; })
+					[ SNew(STextBlock).Font(LabelFont()).Text(FText::FromString("Custom")) ]
 				]
 			]
 		]

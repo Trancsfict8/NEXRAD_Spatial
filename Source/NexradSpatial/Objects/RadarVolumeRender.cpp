@@ -554,17 +554,24 @@ void ARadarVolumeRender::Tick(float DeltaTime)
 	double now = SystemAPI::CurrentTime();
 	GlobalState* globalState = &GetWorld()->GetGameState<ARadarGameStateBase>()->globalState;
 	
-	// Safety net for GPU Melter
-	if (globalState->quality == 3) {
+	// Safety net for GPU Melter and Custom
+	if (globalState->quality == 3 || globalState->quality == 10) {
 		if (DeltaTime > 0.05f) { // Frame took > 50ms (sub 20 FPS)
 			lowFpsAccumulator += DeltaTime;
 			if (lowFpsAccumulator > 3.0f) { // Sustained for 3 seconds
-				globalState->quality = 0; // Revert to Normal
+				if (globalState->quality == 3) {
+					globalState->quality = 0; // Revert to Normal
+					if (GEngine) {
+						GEngine->AddOnScreenDebugMessage(-1, 10.0f, FColor::Red, TEXT("WARNING: GPU Melter caused severe framerate drop. Quality auto-reverted to Normal."), true, FVector2D(2.0f, 2.0f));
+					}
+				} else {
+					globalState->qualityCustomStepSize = 5.0f; // Revert to middle safe default
+					if (GEngine) {
+						GEngine->AddOnScreenDebugMessage(-1, 10.0f, FColor::Red, TEXT("WARNING: Custom step size caused severe framerate drop. Step size auto-reverted to safe default."), true, FVector2D(2.0f, 2.0f));
+					}
+				}
 				globalState->EmitEvent("UpdateVolumeParameters");
 				lowFpsAccumulator = 0.0f;
-				if (GEngine) {
-					GEngine->AddOnScreenDebugMessage(-1, 10.0f, FColor::Red, TEXT("WARNING: GPU Melter caused severe framerate drop. Quality auto-reverted to Normal."));
-				}
 			}
 		} else {
 			lowFpsAccumulator = 0.0f;

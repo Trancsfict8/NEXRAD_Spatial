@@ -125,7 +125,7 @@ void ARadarViewPawn::BeginPlay()
 	vrMenuWidget->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	vrMenuWidget->SetCollisionResponseToAllChannels(ECR_Ignore);
 	vrMenuWidget->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
-	vrMenuWidget->SetBlendMode(EWidgetBlendMode::Transparent);
+	vrMenuWidget->SetBlendMode(EWidgetBlendMode::Opaque);
 	vrMenuWidget->SetTwoSided(true);
 	vrMenuWidget->SetTickWhenOffscreen(true);
 	vrMenuWidget->SetWindowFocusable(true);
