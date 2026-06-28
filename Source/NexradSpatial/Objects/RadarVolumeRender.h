@@ -15,6 +15,7 @@ class UStaticMesh;
 class UStaticMeshComponent;
 class UMaterial;
 class UTexture2D;
+class UMaterialInstanceDynamic;
 //#include "Engine/TextureRenderTarget2D.h"
 //#include "Engine/CanvasRenderTarget2D.h"
 #include "RadarVolumeRender.generated.h"

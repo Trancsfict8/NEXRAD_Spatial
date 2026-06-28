@@ -37,6 +37,8 @@
 
 #include "Engine/Engine.h"
 #include "UObject/Package.h"
+#include "Engine/Texture2D.h"
+#include "UObject/UObjectGlobals.h"
 #if WITH_EDITOR
 //#include "Toolkits/AssetEditorManager.h"
 // #include "Engine/Engine.h"
@@ -492,7 +494,12 @@ void ImGuiUI::MainUI()
 							TSharedPtr<FJsonObject> jsonObject;
 							TSharedRef<TJsonReader<>> reader = TJsonReaderFactory<>::Create(content);
 							if (FJsonSerializer::Deserialize(reader, jsonObject) && jsonObject.IsValid()) {
-								if (jsonObject->HasField(TEXT("lat")) && jsonObject->HasField(TEXT("lon"))) {
+								bool isUS = true;
+								if (jsonObject->HasField(TEXT("countryCode"))) {
+									FString countryCode = jsonObject->GetStringField(TEXT("countryCode"));
+									if (countryCode != TEXT("US")) isUS = false;
+								}
+								if (isUS && jsonObject->HasField(TEXT("lat")) && jsonObject->HasField(TEXT("lon"))) {
 									gsPtr->teleportLatitude = jsonObject->GetNumberField(TEXT("lat"));
 									gsPtr->teleportLongitude = jsonObject->GetNumberField(TEXT("lon"));
 									gsPtr->EmitEvent("TeleportCamera");
@@ -820,7 +827,7 @@ void ImGuiUI::MainUI()
 									}
 								}
 								
-								std::string path = StringUtils::GetUserPath("Data/Historical/" + session + "/");
+								std::string path = StringUtils::GetRelativePath("Data/Historical/" + session + "/");
 								globalState.EmitEvent("LoadDirectory", path, NULL);
 								
 								scrollHistoricalTabToTop = true;
@@ -829,7 +836,7 @@ void ImGuiUI::MainUI()
 						ImGui::EndChild();
 					}
 					
-					ImGui::TextWrapped("Note: To clear historical data, navigate to %s and delete the folders inside.", StringUtils::GetUserPath(std::string("Data/Historical/")).c_str());
+					ImGui::TextWrapped("Note: To clear historical data, navigate to the Data/Historical/ folder next to the application executable and delete the folders inside.");
 					ImGui::TreePop();
 				}
 				

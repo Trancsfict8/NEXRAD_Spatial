@@ -70,14 +70,14 @@ TSharedPtr<FJsonObject> ASettingsSaver::LoadJson(FString filename){
 	TSharedPtr<FJsonObject> jsonObject;
 	if(success){
 		success = FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(dataString), jsonObject);
-		if(success){
+		if(success && jsonObject.IsValid()){
 			return jsonObject;
 		}
 	}
 	success = FFileHelper::LoadFileToString(dataString, *(filename + TEXT(".old")));
 	if(success){
 		success = FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(dataString), jsonObject);
-		if(success){
+		if(success && jsonObject.IsValid()){
 			return jsonObject;
 		}
 	}
@@ -98,7 +98,7 @@ bool ASettingsSaver::SaveJson(FString filename, TSharedPtr<FJsonObject> jsonObje
 		if(readSuccess){
 			readSuccess = FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(oldDataString), jsonObjectOld);
 		}
-		if(readSuccess && jsonObjectOld->Values.Num() > 0){
+		if(readSuccess && jsonObjectOld.IsValid() && jsonObjectOld->Values.Num() > 0){
 			// move existing valid json file
 			IFileManager::Get().Move(*(filename + TEXT(".old")), *filename, true);
 		}
@@ -162,6 +162,7 @@ void ASettingsSaver::LoadSettings() {
 		LOAD_MACRO_FLOAT(downloadPreviousCount);
 		LOAD_MACRO_FLOAT(downloadDeleteAfter);
 		LOAD_MACRO_STRING(downloadSiteId);
+		LOAD_MACRO_STRING(defaultRadarSite);
 		LOAD_MACRO_STRING(downloadUrl);
 		// --Map--
 		LOAD_MACRO_BOOL(enableMap);
@@ -269,6 +270,7 @@ void ASettingsSaver::SaveSettings() {
 		SAVE_MACRO_FLOAT(downloadPreviousCount);
 		SAVE_MACRO_FLOAT(downloadDeleteAfter);
 		SAVE_MACRO_STRING(downloadSiteId);
+		SAVE_MACRO_STRING(defaultRadarSite);
 		SAVE_MACRO_STRING(downloadUrl);
 		// --Map--
 		SAVE_MACRO_BOOL(enableMap);
@@ -420,6 +422,7 @@ void ASettingsSaver::ResetAllSettings() {
 		RESET_MACRO(downloadPreviousCount);
 		RESET_MACRO(downloadDeleteAfter);
 		RESET_MACRO(downloadSiteId);
+		RESET_MACRO(defaultRadarSite);
 		RESET_MACRO(downloadUrl);
 		// --Map--
 		RESET_MACRO(enableMap);

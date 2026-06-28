@@ -80,6 +80,11 @@ public:
 	// is a new texture ready
 	bool pendingTexture = false;
 	
+	UPROPERTY(VisibleAnywhere)
+	UTexture* activeTexture = NULL;
+	UPROPERTY(VisibleAnywhere)
+	FLinearColor activeOffsetAndScale = FLinearColor(0, 0, 1, 1);
+	
 	UPROPERTY(EditAnywhere);
 	UProceduralMeshComponent* proceduralMesh;
 	

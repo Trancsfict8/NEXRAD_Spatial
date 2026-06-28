@@ -125,6 +125,7 @@ void ARadarViewPawn::BeginPlay()
 	vrMenuWidget->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	vrMenuWidget->SetCollisionResponseToAllChannels(ECR_Ignore);
 	vrMenuWidget->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
+	vrMenuWidget->SetBlendMode(EWidgetBlendMode::Transparent);
 	vrMenuWidget->SetTwoSided(true);
 	vrMenuWidget->SetTickWhenOffscreen(true);
 	vrMenuWidget->SetWindowFocusable(true);
@@ -952,97 +953,41 @@ ARadarViewPawn::~ARadarViewPawn(){
 }
 
 void ARadarViewPawn::AutoLocateAndEnableRadar() {
-	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> httpRequest = FHttpModule::Get().CreateRequest();
-	httpRequest->SetURL("http://ip-api.com/json/");
-	httpRequest->SetVerb("GET");
-	httpRequest->OnProcessRequestComplete().BindLambda([this](FHttpRequestPtr Request, FHttpResponsePtr Response, bool bSuccess){
-		if(bSuccess && Response.IsValid()){
-			FString content = Response->GetContentAsString();
-			TSharedPtr<FJsonObject> jsonObject;
-			TSharedRef<TJsonReader<>> reader = TJsonReaderFactory<>::Create(content);
-			if (FJsonSerializer::Deserialize(reader, jsonObject) && jsonObject.IsValid()) {
-				bool isUS = true;
-				if (jsonObject->HasField(TEXT("countryCode"))) {
-					FString countryCode = jsonObject->GetStringField(TEXT("countryCode"));
-					if (countryCode != TEXT("US")) {
-						isUS = false;
-					}
-				}
-
-				// Default to KTLX (Oklahoma City) if not in the US or fields are missing
-				float lat = 35.33336f;
-				float lon = -97.27776f;
-
-				if (isUS && jsonObject->HasField(TEXT("lat")) && jsonObject->HasField(TEXT("lon"))) {
-					lat = jsonObject->GetNumberField(TEXT("lat"));
-					lon = jsonObject->GetNumberField(TEXT("lon"));
-				}
-				
-				if (ARadarGameStateBase* GS = GetWorld()->GetGameState<ARadarGameStateBase>()) {
-					GS->globalState.teleportLatitude = lat;
-					GS->globalState.teleportLongitude = lon;
+	if (ARadarGameStateBase* GS = GetWorld()->GetGameState<ARadarGameStateBase>()) {
+		bool siteFound = false;
+		if (GS->globalState.defaultRadarSite != "") {
+			for (int i = 0; i < NexradSites::numberOfSites; i++) {
+				if (FString(NexradSites::sites[i].name) == FString(GS->globalState.defaultRadarSite.c_str())) {
+					GS->globalState.teleportLatitude = NexradSites::sites[i].latitude;
+					GS->globalState.teleportLongitude = NexradSites::sites[i].longitude;
 					GS->globalState.EmitEvent("TeleportCamera");
 					
-					// Find nearest site
-					float minDist = 999999.0f;
-					const char* bestSite = nullptr;
-					for (int i = 0; i < NexradSites::numberOfSites; i++) {
-						float dLat = NexradSites::sites[i].latitude - lat;
-						float dLon = NexradSites::sites[i].longitude - lon;
-						float dist = dLat*dLat + dLon*dLon;
-						if (dist < minDist) {
-							minDist = dist;
-							bestSite = NexradSites::sites[i].name;
-						}
-					}
-					
-					if (bestSite != nullptr) {
-						std::string nearestSite(bestSite);
-						GS->globalState.downloadSiteId = nearestSite;
-						GS->globalState.downloadData = true;
-						GS->globalState.pollData = true;
-						
-						// Emit LoadDirectory immediately so the radar collection knows where to look,
-						// ensuring data loads even if the downloader takes time to spin up.
-						std::string outputPath = StringUtils::GetUserPath("Data/Realtime/" + nearestSite + "/");
-						GS->globalState.EmitEvent("LoadDirectory", outputPath, NULL);
-					}
-				}
-			}
-		} else {
-			// If request fails gracefully default to a US site
-			if (ARadarGameStateBase* GS = GetWorld()->GetGameState<ARadarGameStateBase>()) {
-				float lat = 35.33336f;
-				float lon = -97.27776f;
-				GS->globalState.teleportLatitude = lat;
-				GS->globalState.teleportLongitude = lon;
-				GS->globalState.EmitEvent("TeleportCamera");
-				
-				float minDist = 999999.0f;
-				const char* bestSite = nullptr;
-				for (int i = 0; i < NexradSites::numberOfSites; i++) {
-					float dLat = NexradSites::sites[i].latitude - lat;
-					float dLon = NexradSites::sites[i].longitude - lon;
-					float dist = dLat*dLat + dLon*dLon;
-					if (dist < minDist) {
-						minDist = dist;
-						bestSite = NexradSites::sites[i].name;
-					}
-				}
-				
-				if (bestSite != nullptr) {
-					std::string nearestSite(bestSite);
-					GS->globalState.downloadSiteId = nearestSite;
+					GS->globalState.downloadSiteId = NexradSites::sites[i].name;
 					GS->globalState.downloadData = true;
 					GS->globalState.pollData = true;
-					
-					std::string outputPath = StringUtils::GetUserPath("Data/Realtime/" + nearestSite + "/");
-					GS->globalState.EmitEvent("LoadDirectory", outputPath, NULL);
+					siteFound = true;
+					break;
 				}
 			}
 		}
-	});
-	httpRequest->ProcessRequest();
+
+		if (!siteFound) {
+			// Fallback to KTLX (Oklahoma City) if no default is found
+			float lat = 35.33336f;
+			float lon = -97.27776f;
+			
+			GS->globalState.teleportLatitude = lat;
+			GS->globalState.teleportLongitude = lon;
+			GS->globalState.EmitEvent("TeleportCamera");
+			
+			GS->globalState.downloadSiteId = "KTLX";
+			GS->globalState.downloadData = true;
+			GS->globalState.pollData = true;
+		}
+
+		std::string outputPath = StringUtils::GetUserPath("Data/Realtime/" + GS->globalState.downloadSiteId + "/");
+		GS->globalState.EmitEvent("LoadDirectory", outputPath, NULL);
+	}
 }
 
 template <class T>

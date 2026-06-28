@@ -586,6 +586,44 @@ TSharedRef<SWidget> SVRMenuWidget::BuildGPSTab()
 	}
 
 	return SNew(SVerticalBox)
+		+ SVerticalBox::Slot().AutoHeight()[ MakeLabel(TEXT("Default Radar Site Settings")) ]
+		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
+		[
+			SNew(STextBlock)
+			.Text_Lambda([this]() {
+				return FText::FromString(FString::Printf(TEXT("Currently selected radar site: %s"), UTF8_TO_TCHAR(GetGlobalState() ? GetGlobalState()->downloadSiteId.c_str() : "")));
+			})
+			.Font(LabelFont())
+			.Justification(ETextJustify::Center)
+		]
+		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
+		[
+			SNew(STextBlock)
+			.Text_Lambda([this]() {
+				return FText::FromString(FString::Printf(TEXT("Default radar site: %s"), UTF8_TO_TCHAR(GetGlobalState() ? (GetGlobalState()->defaultRadarSite == "" ? "None" : GetGlobalState()->defaultRadarSite.c_str()) : "")));
+			})
+			.Font(LabelFont())
+			.Justification(ETextJustify::Center)
+		]
+		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,8))
+		[
+			SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot().FillWidth(1).Padding(FMargin(0,0,4,0))
+			[
+				SNew(SBox).HeightOverride(50.0f)[
+					SNew(SButton)
+					.Text_Lambda([this]() {
+						return FText::FromString(FString::Printf(TEXT("Set %s as default"), UTF8_TO_TCHAR(GetGlobalState() ? GetGlobalState()->downloadSiteId.c_str() : "")));
+					})
+					.OnClicked_Lambda([this]() {
+						if (GlobalState* gs = GetGlobalState()) {
+							gs->defaultRadarSite = gs->downloadSiteId;
+						}
+						return FReply::Handled();
+					})
+				]
+			]
+		]
 		+ SVerticalBox::Slot().AutoHeight()[ MakeLabel(TEXT("Jump to Coordinates")) ]
 
 #if 0 // Hidden per user request
@@ -1254,10 +1292,7 @@ TSharedRef<SWidget> SVRMenuWidget::BuildHistoricalTab()
 			+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0, 16))
 			[
 				SNew(STextBlock)
-				.Text_Lambda([this]() {
-					FString path = FString(StringUtils::GetUserPath(std::string("Data/Historical/")).c_str());
-					return FText::FromString("Note: To clear historical data, navigate to\n" + path + "\nand delete the folders inside.");
-				})
+				.Text(FText::FromString("Note: To clear historical data, navigate to the Data/Historical/ folder next to the application executable and delete the folders inside."))
 				.Font(FCoreStyle::GetDefaultFontStyle("Regular", 12))
 				.ColorAndOpacity(DimText())
 				.AutoWrapText(true)
@@ -1321,7 +1356,7 @@ void SVRMenuWidget::Tick(const FGeometry& AllottedGeometry, const double InCurre
 								}
 							}
 							
-							std::string path = StringUtils::GetUserPath("Data/Historical/" + session + "/");
+							std::string path = StringUtils::GetRelativePath("Data/Historical/" + session + "/");
 							InnerGS->EmitEvent("LoadDirectory", path, NULL);
 							if (HistoricalTabRootScrollBox.IsValid()) {
 								HistoricalTabRootScrollBox->ScrollToStart();

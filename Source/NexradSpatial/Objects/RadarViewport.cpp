@@ -2,7 +2,10 @@
 
 
 #include "RadarViewport.h"
-
+#include "Materials/Material.h"
+#include "Materials/MaterialInstanceDynamic.h"
+#include "Engine/StaticMesh.h"
+#include "Components/StaticMeshComponent.h"
 
 // Sets default values
 ARadarViewport::ARadarViewport()

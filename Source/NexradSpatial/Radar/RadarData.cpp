@@ -15,6 +15,7 @@
 #else
 
 #endif
+#include "Math/UnrealMathUtility.h"
 #include <map>
 #include <algorithm>
 #include <cmath>

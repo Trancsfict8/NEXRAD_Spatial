@@ -392,7 +392,7 @@ void AMapMesh::MakeChildren(){
 					tileLonWidth
 				);
 				child->UpdatePosition(FVectorToSimpleVector3(GetActorLocation()), appliedRotation);
-				child->UpdateTexture(materialInstance->K2_GetTextureParameterValue(TEXT("Texture")), true);
+				child->UpdateTexture(activeTexture, true);
 				child->UpdateParameters();
 				child->LoadTile();
 				mapChildren[i] = child;
@@ -482,22 +482,19 @@ void AMapMesh::UpdatePosition(SimpleVector3<> position, SimpleVector3<> rotation
 }
 
 void AMapMesh::UpdateTexture(UTexture* newTexture, bool fromParent){
+	activeTexture = newTexture;
 	materialInstance->SetTextureParameterValue(TEXT("Texture"), newTexture);
 	if(fromParent && mapParent != NULL){
-		FLinearColor offsetAndScale = mapParent->materialInstance->K2_GetVectorParameterValue(TEXT("OffsetAndScale"));
-		// double parentTileLon = longitudeRadians - longitudeWidthRadians / 2.0;
-		// double parentTileLat = latitudeRadians + latitudeHeightRadians / 2.0;
-		// offsetAndScale.R = offsetAndScale.R + ((tileLon - parentTileLon) / longitudeWidthRadians) * offsetAndScale.B;
-		// offsetAndScale.G = offsetAndScale.G + ((parentTileLat - tileLat) / latitudeHeightRadians) * offsetAndScale.A;
-		// offsetAndScale.B *= tileLonWidth / longitudeWidthRadians;
-		// offsetAndScale.A *= tileLatHeight / latitudeHeightRadians;
+		FLinearColor offsetAndScale = mapParent->activeOffsetAndScale;
 		offsetAndScale.R = offsetAndScale.R + ((childId == 1 || childId == 3) ? 1 : 0) * offsetAndScale.B * 0.5;
 		offsetAndScale.G = offsetAndScale.G + ((childId == 2 || childId == 3) ? 1 : 0) * offsetAndScale.A * 0.5;
 		offsetAndScale.B *= 0.5;
 		offsetAndScale.A *= 0.5;
+		activeOffsetAndScale = offsetAndScale;
 		materialInstance->SetVectorParameterValue(TEXT("OffsetAndScale"), offsetAndScale);
 	}else{
 		FLinearColor offsetAndScale = FLinearColor(0, 0, 1, 1);
+		activeOffsetAndScale = offsetAndScale;
 		materialInstance->SetVectorParameterValue(TEXT("OffsetAndScale"), offsetAndScale);
 	}
 	for(int i = 0; i < 4; i++){

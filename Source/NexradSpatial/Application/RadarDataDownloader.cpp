@@ -533,7 +533,7 @@ void ARadarDataDownloader::Tick(float DeltaTime)
 				
 				char pathBuf[256];
 				snprintf(pathBuf, sizeof(pathBuf), "Data/Historical/%s_%04d_%02d_%02d/", historicalTask->siteId.c_str(), historicalTask->year, historicalTask->month, historicalTask->day);
-				historicalTask->outputPath = StringUtils::GetUserPath(std::string(pathBuf));
+				historicalTask->outputPath = StringUtils::GetRelativePath(std::string(pathBuf));
 				
 				historicalTask->Start();
 				fprintf(stderr, "Starting historical downloader for %s\n", historicalTask->siteId.c_str());
@@ -565,7 +565,7 @@ void ARadarDataDownloader::Tick(float DeltaTime)
 				listTask = NULL;
 			}
 			listTask = new HistoricalSessionsListTask();
-			listTask->basePath = StringUtils::GetUserPath(std::string("Data/Historical/"));
+			listTask->basePath = StringUtils::GetRelativePath(std::string("Data/Historical/"));
 			listTask->globalState = globalState;
 			listTask->Start();
 		}

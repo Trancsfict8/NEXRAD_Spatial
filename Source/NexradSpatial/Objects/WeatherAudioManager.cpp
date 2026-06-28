@@ -5,6 +5,7 @@
 #include "../Application/GlobalState.h"
 #include "RadarGameStateBase.h"
 #include "EngineUtils.h"
+#include "Sound/SoundBase.h"
 
 UWeatherAudioManager::UWeatherAudioManager()
 {

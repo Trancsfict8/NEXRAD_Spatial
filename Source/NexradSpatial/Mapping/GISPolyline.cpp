@@ -11,6 +11,7 @@
 #include "../Radar/Globe.h"
 #include "./Data/ShapeFile.h"
 #include "./Data/ElevationData.h"
+#include "Engine/World.h"
 
 AGISPolyline::AGISPolyline(){
 	material = ConstructorHelpers::FObjectFinder<UMaterial>(TEXT("/Script/Engine.Material'/Game/Materials/GISLine.GISLine'")).Object;

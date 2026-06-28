@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Interfaces/IHttpRequest.h"
+#include "Materials/Material.h"
 
 class UInstancedStaticMeshComponent;
 class UTextRenderComponent;
@@ -53,6 +54,8 @@ private:
     float fetchInterval = 60.0f; // Fetch every 60 seconds
     
     FString lastSiteId = "";
+    bool meshesDirty = true;
+    bool meshesNeedClear = true;
     
 public:
     struct FStormAttr {

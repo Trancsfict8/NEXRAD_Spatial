@@ -14,6 +14,8 @@
 #include "Engine/World.h"
 #include "UObject/ConstructorHelpers.h"
 #include "Engine/StaticMesh.h"
+#include "Materials/Material.h"
+#include "Materials/MaterialInstanceDynamic.h"
 
 AStormAttributeManager::AStormAttributeManager()
 {
@@ -116,14 +118,17 @@ void AStormAttributeManager::Tick(float DeltaTime)
     bool wantsAny = globalState->showLevel3StormAttributes || globalState->showLevel3StormTracks;
 
     if (!globalState || !globalState->downloadData || !wantsAny) {
-        TvsMeshComponent->ClearInstances();
-        HailSmallMeshComponent->ClearInstances();
-        HailMediumMeshComponent->ClearInstances();
-        HailLargeMeshComponent->ClearInstances();
-        TrackMeshComponent->ClearInstances();
-        TrackMarkerMeshComponent->ClearInstances();
-        HideAllText();
-        currentAttributes.Empty();
+        if (meshesNeedClear) {
+            TvsMeshComponent->ClearInstances();
+            HailSmallMeshComponent->ClearInstances();
+            HailMediumMeshComponent->ClearInstances();
+            HailLargeMeshComponent->ClearInstances();
+            TrackMeshComponent->ClearInstances();
+            TrackMarkerMeshComponent->ClearInstances();
+            HideAllText();
+            currentAttributes.Empty();
+            meshesNeedClear = false;
+        }
         return;
     }
     
@@ -136,6 +141,7 @@ void AStormAttributeManager::Tick(float DeltaTime)
         lastSiteId = currentSite;
         currentAttributes.Empty();
         lastFetchTime = fetchInterval; // force fetch immediately on site change
+        meshesDirty = true;
     }
     
     // Global attribute toggling is handled in UpdateMeshes to allow dynamic updates
@@ -147,7 +153,11 @@ void AStormAttributeManager::Tick(float DeltaTime)
         FetchStormAttributes();
     }
     
-    UpdateMeshes();
+    if (meshesDirty) {
+        meshesDirty = false;
+        meshesNeedClear = true;
+        UpdateMeshes();
+    }
 }
 
 void AStormAttributeManager::FetchStormAttributes()
@@ -245,6 +255,7 @@ void AStormAttributeManager::OnAttributesFetched(FHttpRequestPtr Request, FHttpR
 
             FScopeLock lock(&attributesMutex);
             currentAttributes = newAttrs;
+            meshesDirty = true;
         }
     }
 }
