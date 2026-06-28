@@ -1,0 +1,130 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+#pragma once
+
+
+#include "../Radar/RadarCollection.h"
+#include "../Radar/RadarColorIndex.h"
+
+#include <vector>
+
+#include "CoreMinimal.h"
+#include "GameFramework/Actor.h"
+
+class UStaticMesh;
+class UStaticMeshComponent;
+class UMaterial;
+class UTexture2D;
+class UMaterialInstanceDynamic;
+//#include "Engine/TextureRenderTarget2D.h"
+//#include "Engine/CanvasRenderTarget2D.h"
+#include "RadarVolumeRender.generated.h"
+
+
+class UMaterialRenderTarget;
+class FRenderTarget;
+class UTextRenderComponent;
+
+UCLASS()
+class NEXRADSPATIAL_API ARadarVolumeRender : public AActor
+{
+	GENERATED_BODY()
+
+public:
+	// Sets default values for this actor's properties
+	ARadarVolumeRender();
+	~ARadarVolumeRender();
+
+	UPROPERTY(VisibleAnywhere)
+		UStaticMeshComponent* cubeMeshComponent;
+	//UPROPERTY(VisibleAnywhere)
+	UPROPERTY(VisibleAnywhere)
+	UMaterialInstanceDynamic* radarMaterialInstance = NULL;
+	UPROPERTY(VisibleAnywhere)
+	UMaterialInstanceDynamic* interpolationMaterialInstance = NULL;
+	UPROPERTY(VisibleAnywhere)
+	UStaticMesh* cubeMesh = NULL;
+	UPROPERTY(VisibleAnywhere)
+	UMaterial* storedMaterial = NULL;
+	UPROPERTY(VisibleAnywhere)
+	UTextRenderComponent* loadingTextComponent = NULL;
+	UPROPERTY(EditAnywhere)
+	UMaterial* storedInterpolationMaterial = NULL;
+	
+	// true if time interpolation is enabled. call InitializeTextures after changing
+	bool doTimeInterpolation = false;
+	
+	// if interpolation is being animated
+	bool interpolationAnimating = false;
+	float interpolationStartValue = 0;
+	float interpolationEndValue = 0;
+	double interpolationStartTime = 0;
+	double interpolationEndTime = 0;
+	
+	// Dynamic Volumetric Culling
+	float DynamicCameraClipDistance = 10000.0f;
+
+	
+	// index used for choosing noise. wraps at 64
+	int frameIndex = 0;
+	
+	// write to volume 1 if true and write to volume 2 if false
+	bool usePrimaryTexture = true;
+	UPROPERTY(VisibleAnywhere)
+	UTexture2D* volumeTexture = NULL;
+	//FByteBulkData* volumeImageData;
+	UPROPERTY(VisibleAnywhere)
+	UTexture2D* volumeTexture2 = NULL;
+	//FByteBulkData* volumeImageData2;
+	UPROPERTY(VisibleAnywhere)
+	UMaterialRenderTarget* volumeMaterialRenderTarget = NULL;
+
+	FRenderTarget* volumeRenderTarget;
+	UPROPERTY(VisibleAnywhere)
+	UTexture2D* angleIndexTexture = NULL;
+	//FByteBulkData* angleIndexImageData;
+	UPROPERTY(VisibleAnywhere)
+	UTexture2D* valueIndexTexture = NULL;
+	//FByteBulkData* valueIndexImageData;
+	static ARadarVolumeRender* instance;
+	RadarCollection* radarCollection = NULL;
+	RadarData* radarData = NULL;
+	std::string lastSiteId = "";
+	
+	//GlobalState* globalState = NULL;
+	std::vector<uint64_t> callbackIds = {};
+	RadarColorIndex* radarColor = &RadarColorIndexReflectivity::defaultInstance;
+	RadarColorIndex::Result radarColorResult = {};
+	RadarColorIndex::Result radarColorResultAlternate = {};
+	
+	// Cached custom color table data from RadarColorTableSubsystem
+	bool bHasCustomReflectivityTable = false;
+	TArray<float> cachedCustomReflectivityData;
+	float cachedCustomReflectivityMin = 0.0f;
+	float cachedCustomReflectivityMax = 1.0f;
+
+	bool bHasCustomVelocityTable = false;
+	TArray<float> cachedCustomVelocityData;
+	float cachedCustomVelocityMin = 0.0f;
+	float cachedCustomVelocityMax = 1.0f;
+	
+	// load data from RadarUpdateEvent into shader
+	void HandleRadarDataEvent(RadarCollection::RadarUpdateEvent event);
+	
+	void RandomizeTexture();
+
+	//Initialize all textures or reinitialize ones that need it
+	void InitializeTextures();
+	
+	
+
+protected:
+	// Called when the game starts or when spawned
+	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type endPlayReason) override;
+
+public:
+	// Called every frame
+	virtual void Tick(float DeltaTime) override;
+
+};
