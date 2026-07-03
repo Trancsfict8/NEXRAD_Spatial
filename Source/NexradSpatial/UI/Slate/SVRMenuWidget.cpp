@@ -52,7 +52,7 @@ static FSlateFontInfo CheckboxFont()
 	return FCoreStyle::GetDefaultFontStyle("Bold", 18); // 25% bigger than 14
 }
 
-static FLinearColor AccentColor() { return FLinearColor(0.1f, 0.6f, 1.0f); }
+static FLinearColor AccentColor() { return FLinearColor(0.0f, 1.0f, 0.5f); } // #00ff80
 static FLinearColor DimText()    { return FLinearColor(0.7f, 0.7f, 0.7f); }
 
 void SVRMenuWidget::Construct(const FArguments& InArgs)
@@ -63,7 +63,7 @@ void SVRMenuWidget::Construct(const FArguments& InArgs)
 	ChildSlot
 	[
 		SNew(SBorder)
-		.BorderBackgroundColor(FLinearColor(0.05f, 0.05f, 0.08f, 0.95f))
+		.BorderBackgroundColor(FLinearColor(FColor(15, 23, 42, 242))) // Slate blue base (sRGB to Linear converted automatically via FColor constructor)
 		.Padding(FMargin(0))
 		[
 			SNew(SVerticalBox)
@@ -73,7 +73,7 @@ void SVRMenuWidget::Construct(const FArguments& InArgs)
 			.AutoHeight()
 			[
 				SNew(SBorder)
-				.BorderBackgroundColor(FLinearColor(0.08f, 0.08f, 0.15f, 1.0f))
+				.BorderBackgroundColor(FLinearColor(FColor(30, 41, 59, 255))) // Slightly lighter slate (sRGB to Linear)
 				.Padding(FMargin(16, 10))
 				[
 					SNew(SHorizontalBox)
@@ -89,7 +89,7 @@ void SVRMenuWidget::Construct(const FArguments& InArgs)
 								UTexture2D* LogoTex = LoadObject<UTexture2D>(nullptr, TEXT("/Game/Textures/NEXRADSpatial_logo.NEXRADSpatial_logo"));
 								if (LogoTex) {
 									LogoBrush->SetResourceObject(LogoTex);
-									LogoBrush->ImageSize = FVector2D(32.f, 32.f);
+									LogoBrush->ImageSize = FVector2D(38.4f, 38.4f); // 20% bigger than original 32x32
 								}
 							}
 							return LogoBrush;
@@ -880,28 +880,28 @@ TSharedRef<SWidget> SVRMenuWidget::BuildSettingsTab()
 				[
 					SNew(SButton).HAlign(HAlign_Center).VAlign(VAlign_Center)
 					.OnClicked_Lambda([this]() { if (GetGlobalState()) { GetGlobalState()->quality = -10.0f; GetGlobalState()->EmitEvent("UpdateVolumeParameters"); } return FReply::Handled(); })
-					.ButtonColorAndOpacity_Lambda([this]() { return (GetGlobalState() && GetGlobalState()->quality == -10.0f) ? FLinearColor(0, 0.5f, 1.0f, 1) : FLinearColor::White; })
+					.ButtonColorAndOpacity_Lambda([this]() { return (GetGlobalState() && GetGlobalState()->quality == -10.0f) ? AccentColor() : FLinearColor::White; })
 					[ SNew(STextBlock).Font(LabelFont()).Text(FText::FromString("Potato")) ]
 				]
 				+ SHorizontalBox::Slot().FillWidth(1.0f).Padding(2)
 				[
 					SNew(SButton).HAlign(HAlign_Center).VAlign(VAlign_Center)
 					.OnClicked_Lambda([this]() { if (GetGlobalState()) { GetGlobalState()->quality = -2.0f; GetGlobalState()->EmitEvent("UpdateVolumeParameters"); } return FReply::Handled(); })
-					.ButtonColorAndOpacity_Lambda([this]() { return (GetGlobalState() && GetGlobalState()->quality == -2.0f) ? FLinearColor(0, 0.5f, 1.0f, 1) : FLinearColor::White; })
+					.ButtonColorAndOpacity_Lambda([this]() { return (GetGlobalState() && GetGlobalState()->quality == -2.0f) ? AccentColor() : FLinearColor::White; })
 					[ SNew(STextBlock).Font(LabelFont()).Text(FText::FromString("Very Low")) ]
 				]
 				+ SHorizontalBox::Slot().FillWidth(1.0f).Padding(2)
 				[
 					SNew(SButton).HAlign(HAlign_Center).VAlign(VAlign_Center)
 					.OnClicked_Lambda([this]() { if (GetGlobalState()) { GetGlobalState()->quality = -1.0f; GetGlobalState()->EmitEvent("UpdateVolumeParameters"); } return FReply::Handled(); })
-					.ButtonColorAndOpacity_Lambda([this]() { return (GetGlobalState() && GetGlobalState()->quality == -1.0f) ? FLinearColor(0, 0.5f, 1.0f, 1) : FLinearColor::White; })
+					.ButtonColorAndOpacity_Lambda([this]() { return (GetGlobalState() && GetGlobalState()->quality == -1.0f) ? AccentColor() : FLinearColor::White; })
 					[ SNew(STextBlock).Font(LabelFont()).Text(FText::FromString("Low")) ]
 				]
 				+ SHorizontalBox::Slot().FillWidth(1.0f).Padding(2)
 				[
 					SNew(SButton).HAlign(HAlign_Center).VAlign(VAlign_Center)
 					.OnClicked_Lambda([this]() { if (GetGlobalState()) { GetGlobalState()->quality = 0.0f; GetGlobalState()->EmitEvent("UpdateVolumeParameters"); } return FReply::Handled(); })
-					.ButtonColorAndOpacity_Lambda([this]() { return (GetGlobalState() && GetGlobalState()->quality == 0.0f) ? FLinearColor(0, 0.5f, 1.0f, 1) : FLinearColor::White; })
+					.ButtonColorAndOpacity_Lambda([this]() { return (GetGlobalState() && GetGlobalState()->quality == 0.0f) ? AccentColor() : FLinearColor::White; })
 					[ SNew(STextBlock).Font(LabelFont()).Text(FText::FromString("Normal")) ]
 				]
 			]
@@ -912,28 +912,28 @@ TSharedRef<SWidget> SVRMenuWidget::BuildSettingsTab()
 				[
 					SNew(SButton).HAlign(HAlign_Center).VAlign(VAlign_Center)
 					.OnClicked_Lambda([this]() { if (GetGlobalState()) { GetGlobalState()->quality = 1.0f; GetGlobalState()->EmitEvent("UpdateVolumeParameters"); } return FReply::Handled(); })
-					.ButtonColorAndOpacity_Lambda([this]() { return (GetGlobalState() && GetGlobalState()->quality == 1.0f) ? FLinearColor(0, 0.5f, 1.0f, 1) : FLinearColor::White; })
+					.ButtonColorAndOpacity_Lambda([this]() { return (GetGlobalState() && GetGlobalState()->quality == 1.0f) ? AccentColor() : FLinearColor::White; })
 					[ SNew(STextBlock).Font(LabelFont()).Text(FText::FromString("High")) ]
 				]
 				+ SHorizontalBox::Slot().FillWidth(1.0f).Padding(2)
 				[
 					SNew(SButton).HAlign(HAlign_Center).VAlign(VAlign_Center)
 					.OnClicked_Lambda([this]() { if (GetGlobalState()) { GetGlobalState()->quality = 2.0f; GetGlobalState()->EmitEvent("UpdateVolumeParameters"); } return FReply::Handled(); })
-					.ButtonColorAndOpacity_Lambda([this]() { return (GetGlobalState() && GetGlobalState()->quality == 2.0f) ? FLinearColor(0, 0.5f, 1.0f, 1) : FLinearColor::White; })
+					.ButtonColorAndOpacity_Lambda([this]() { return (GetGlobalState() && GetGlobalState()->quality == 2.0f) ? AccentColor() : FLinearColor::White; })
 					[ SNew(STextBlock).Font(LabelFont()).Text(FText::FromString("Very High")) ]
 				]
 				+ SHorizontalBox::Slot().FillWidth(1.0f).Padding(2)
 				[
 					SNew(SButton).HAlign(HAlign_Center).VAlign(VAlign_Center)
 					.OnClicked_Lambda([this]() { if (GetGlobalState()) { GetGlobalState()->quality = 3.0f; GetGlobalState()->EmitEvent("UpdateVolumeParameters"); } return FReply::Handled(); })
-					.ButtonColorAndOpacity_Lambda([this]() { return (GetGlobalState() && GetGlobalState()->quality == 3.0f) ? FLinearColor(0, 0.5f, 1.0f, 1) : FLinearColor::White; })
+					.ButtonColorAndOpacity_Lambda([this]() { return (GetGlobalState() && GetGlobalState()->quality == 3.0f) ? AccentColor() : FLinearColor::White; })
 					[ SNew(STextBlock).Font(LabelFont()).Text(FText::FromString("GPU Melter")) ]
 				]
 				+ SHorizontalBox::Slot().FillWidth(1.0f).Padding(2)
 				[
 					SNew(SButton).HAlign(HAlign_Center).VAlign(VAlign_Center)
 					.OnClicked_Lambda([this]() { if (GetGlobalState()) { GetGlobalState()->quality = 10.0f; GetGlobalState()->EmitEvent("UpdateVolumeParameters"); } return FReply::Handled(); })
-					.ButtonColorAndOpacity_Lambda([this]() { return (GetGlobalState() && GetGlobalState()->quality == 10.0f) ? FLinearColor(0, 0.5f, 1.0f, 1) : FLinearColor::White; })
+					.ButtonColorAndOpacity_Lambda([this]() { return (GetGlobalState() && GetGlobalState()->quality == 10.0f) ? AccentColor() : FLinearColor::White; })
 					[ SNew(STextBlock).Font(LabelFont()).Text(FText::FromString("Custom")) ]
 				]
 			]

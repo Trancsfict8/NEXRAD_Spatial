@@ -4,6 +4,7 @@
 
 
 #include "RadarVolumeRender.h"
+#include "Engine/Engine.h"
 #include "RadarGameStateBase.h"
 #include "../UI/Native.h"
 #include "Kismet/GameplayStatics.h"
