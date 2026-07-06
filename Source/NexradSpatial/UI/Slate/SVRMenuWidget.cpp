@@ -568,14 +568,24 @@ TSharedRef<SWidget> SVRMenuWidget::BuildGPSTab()
 				.OnClicked_Lambda([this, SiteName]() {
 					if (GlobalState* gs = GetGlobalState()) {
 						gs->downloadSiteId = std::string(TCHAR_TO_UTF8(*SiteName));
-					if (gs->historicalMode) {
-						gs->historicalMode = false;
-						gs->historicalDownloading = false;
-						gs->downloadData = true;
-						gs->pollData = true;
-						gs->warningPopupText = "Historical mode cancelled. Switched back to live data.";
-						gs->showWarningPopup = true;
-					}
+						
+						for (size_t j = 0; j < NexradSites::numberOfSites; j++) {
+							if (NexradSites::sites[j].name == gs->downloadSiteId) {
+								gs->teleportLatitude = NexradSites::sites[j].latitude;
+								gs->teleportLongitude = NexradSites::sites[j].longitude;
+								gs->EmitEvent("TeleportCamera");
+								break;
+							}
+						}
+
+						if (gs->historicalMode) {
+							gs->historicalMode = false;
+							gs->historicalDownloading = false;
+							gs->downloadData = true;
+							gs->pollData = true;
+							gs->warningPopupText = "Historical mode cancelled. Switched back to live data.";
+							gs->showWarningPopup = true;
+						}
 						gs->downloadData = true;
 						gs->pollData = true;
 					}
@@ -1054,6 +1064,14 @@ TSharedRef<SWidget> SVRMenuWidget::BuildSettingsTab()
 
 		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
 		[
+			MakeIntSlider(TEXT("Live Data Frames to Keep"), 
+				[this]() { return GetGlobalState() ? GetGlobalState()->downloadPreviousCount : 10; },
+				[this](int v) { if (GetGlobalState()) GetGlobalState()->downloadPreviousCount = v; }, 
+				5, []() { return 50; })
+		]
+
+		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
+		[
 			MakeSlider(TEXT("Hold on Last Frame"), 
 				[this]() { return GetGlobalState() ? GetGlobalState()->animateHoldEnd / 5.0f : 0.0f; },
 				[this](float v) { if (GetGlobalState()) GetGlobalState()->animateHoldEnd = v * 5.0f; }, 
@@ -1078,9 +1096,10 @@ TSharedRef<SWidget> SVRMenuWidget::BuildSettingsTab()
 
 		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
 		[
-			MakeCheckbox(TEXT("Delete Old Scans (Keep 2 Hours)"), 
-				[this]() { return GetGlobalState() && GetGlobalState()->downloadDeleteAfter == 7200.0f; }, 
-				[this](bool v) { if (GetGlobalState()) GetGlobalState()->downloadDeleteAfter = v ? 7200.0f : 0.0f; })
+			MakeIntSlider(TEXT("Delete Old Scans (Hours, 0=Never)"), 
+				[this]() { return GetGlobalState() ? FMath::RoundToInt(GetGlobalState()->downloadDeleteAfter / 3600.0f) : 2; },
+				[this](int v) { if (GetGlobalState()) GetGlobalState()->downloadDeleteAfter = v * 3600.0f; }, 
+				0, []() { return 720; })
 		]
 
 		+ SVerticalBox::Slot().AutoHeight()[ MakeLabel(TEXT("System")) ]
