@@ -63,6 +63,9 @@ public:
 	
 	// Dynamic Volumetric Culling
 	float DynamicCameraClipDistance = 10000.0f;
+	
+	// FPS monitoring for GPU Melter
+	float lowFpsAccumulator = 0.0f;
 
 	
 	// index used for choosing noise. wraps at 64

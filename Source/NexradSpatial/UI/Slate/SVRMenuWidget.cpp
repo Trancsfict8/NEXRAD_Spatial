@@ -52,7 +52,7 @@ static FSlateFontInfo CheckboxFont()
 	return FCoreStyle::GetDefaultFontStyle("Bold", 18); // 25% bigger than 14
 }
 
-static FLinearColor AccentColor() { return FLinearColor(0.1f, 0.6f, 1.0f); }
+static FLinearColor AccentColor() { return FLinearColor(FColor(245, 218, 43, 255)); } // Nexrad Logo Gold
 static FLinearColor DimText()    { return FLinearColor(0.7f, 0.7f, 0.7f); }
 
 void SVRMenuWidget::Construct(const FArguments& InArgs)
@@ -63,7 +63,8 @@ void SVRMenuWidget::Construct(const FArguments& InArgs)
 	ChildSlot
 	[
 		SNew(SBorder)
-		.BorderBackgroundColor(FLinearColor(0.05f, 0.05f, 0.08f, 0.95f))
+		.BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush"))
+		.BorderBackgroundColor(FLinearColor(FColor(14, 30, 46, 240))) // Nexrad Logo Dark Blue base
 		.Padding(FMargin(0))
 		[
 			SNew(SVerticalBox)
@@ -73,7 +74,8 @@ void SVRMenuWidget::Construct(const FArguments& InArgs)
 			.AutoHeight()
 			[
 				SNew(SBorder)
-				.BorderBackgroundColor(FLinearColor(0.08f, 0.08f, 0.15f, 1.0f))
+				.BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush"))
+				.BorderBackgroundColor(FLinearColor(FColor(20, 38, 56, 255))) // Nexrad Logo Lighter Blue header
 				.Padding(FMargin(16, 10))
 				[
 					SNew(SHorizontalBox)
@@ -89,7 +91,7 @@ void SVRMenuWidget::Construct(const FArguments& InArgs)
 								UTexture2D* LogoTex = LoadObject<UTexture2D>(nullptr, TEXT("/Game/Textures/NEXRADSpatial_logo.NEXRADSpatial_logo"));
 								if (LogoTex) {
 									LogoBrush->SetResourceObject(LogoTex);
-									LogoBrush->ImageSize = FVector2D(32.f, 32.f);
+									LogoBrush->ImageSize = FVector2D(38.4f, 38.4f); // 20% bigger than original 32x32
 								}
 							}
 							return LogoBrush;
@@ -568,14 +570,24 @@ TSharedRef<SWidget> SVRMenuWidget::BuildGPSTab()
 				.OnClicked_Lambda([this, SiteName]() {
 					if (GlobalState* gs = GetGlobalState()) {
 						gs->downloadSiteId = std::string(TCHAR_TO_UTF8(*SiteName));
-					if (gs->historicalMode) {
-						gs->historicalMode = false;
-						gs->historicalDownloading = false;
-						gs->downloadData = true;
-						gs->pollData = true;
-						gs->warningPopupText = "Historical mode cancelled. Switched back to live data.";
-						gs->showWarningPopup = true;
-					}
+						
+						for (size_t j = 0; j < NexradSites::numberOfSites; j++) {
+							if (NexradSites::sites[j].name == gs->downloadSiteId) {
+								gs->teleportLatitude = NexradSites::sites[j].latitude;
+								gs->teleportLongitude = NexradSites::sites[j].longitude;
+								gs->EmitEvent("TeleportCamera");
+								break;
+							}
+						}
+
+						if (gs->historicalMode) {
+							gs->historicalMode = false;
+							gs->historicalDownloading = false;
+							gs->downloadData = true;
+							gs->pollData = true;
+							gs->warningPopupText = "Historical mode cancelled. Switched back to live data.";
+							gs->showWarningPopup = true;
+						}
 						gs->downloadData = true;
 						gs->pollData = true;
 					}
@@ -868,20 +880,118 @@ TSharedRef<SWidget> SVRMenuWidget::BuildSettingsTab()
 
 		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
 		[
-			MakeSlider(TEXT("Raymarching Step Size"), 
-				[this]() { return GetGlobalState() ? (GetGlobalState()->qualityCustomStepSize - 0.1f) / 19.9f : 0.0f; },
-				[this](float v) { if (GetGlobalState()) GetGlobalState()->qualityCustomStepSize = 0.1f + (v * 19.9f); }, 
-				TEXT("Raymarching Quality Step Size: {0} (Lower is better quality, higher is better FPS)"))
+			SNew(SVerticalBox)
+			+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
+			[
+				SNew(STextBlock).Text(FText::FromString("Graphics Quality:")).Font(LabelFont()).ColorAndOpacity(DimText())
+			]
+			+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
+			[
+				SNew(SHorizontalBox)
+				+ SHorizontalBox::Slot().FillWidth(1.0f).Padding(2)
+				[
+					SNew(SButton).HAlign(HAlign_Center).VAlign(VAlign_Center)
+					.OnClicked_Lambda([this]() { if (GetGlobalState()) { GetGlobalState()->quality = -10.0f; GetGlobalState()->EmitEvent("UpdateVolumeParameters"); } return FReply::Handled(); })
+					.ButtonColorAndOpacity_Lambda([this]() { return (GetGlobalState() && GetGlobalState()->quality == -10.0f) ? AccentColor() : FLinearColor::White; })
+					[ SNew(STextBlock).Font(LabelFont()).Text(FText::FromString("Potato")) ]
+				]
+				+ SHorizontalBox::Slot().FillWidth(1.0f).Padding(2)
+				[
+					SNew(SButton).HAlign(HAlign_Center).VAlign(VAlign_Center)
+					.OnClicked_Lambda([this]() { if (GetGlobalState()) { GetGlobalState()->quality = -2.0f; GetGlobalState()->EmitEvent("UpdateVolumeParameters"); } return FReply::Handled(); })
+					.ButtonColorAndOpacity_Lambda([this]() { return (GetGlobalState() && GetGlobalState()->quality == -2.0f) ? AccentColor() : FLinearColor::White; })
+					[ SNew(STextBlock).Font(LabelFont()).Text(FText::FromString("Very Low")) ]
+				]
+				+ SHorizontalBox::Slot().FillWidth(1.0f).Padding(2)
+				[
+					SNew(SButton).HAlign(HAlign_Center).VAlign(VAlign_Center)
+					.OnClicked_Lambda([this]() { if (GetGlobalState()) { GetGlobalState()->quality = -1.0f; GetGlobalState()->EmitEvent("UpdateVolumeParameters"); } return FReply::Handled(); })
+					.ButtonColorAndOpacity_Lambda([this]() { return (GetGlobalState() && GetGlobalState()->quality == -1.0f) ? AccentColor() : FLinearColor::White; })
+					[ SNew(STextBlock).Font(LabelFont()).Text(FText::FromString("Low")) ]
+				]
+				+ SHorizontalBox::Slot().FillWidth(1.0f).Padding(2)
+				[
+					SNew(SButton).HAlign(HAlign_Center).VAlign(VAlign_Center)
+					.OnClicked_Lambda([this]() { if (GetGlobalState()) { GetGlobalState()->quality = 0.0f; GetGlobalState()->EmitEvent("UpdateVolumeParameters"); } return FReply::Handled(); })
+					.ButtonColorAndOpacity_Lambda([this]() { return (GetGlobalState() && GetGlobalState()->quality == 0.0f) ? AccentColor() : FLinearColor::White; })
+					[ SNew(STextBlock).Font(LabelFont()).Text(FText::FromString("Normal")) ]
+				]
+			]
+			+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
+			[
+				SNew(SHorizontalBox)
+				+ SHorizontalBox::Slot().FillWidth(1.0f).Padding(2)
+				[
+					SNew(SButton).HAlign(HAlign_Center).VAlign(VAlign_Center)
+					.OnClicked_Lambda([this]() { if (GetGlobalState()) { GetGlobalState()->quality = 1.0f; GetGlobalState()->EmitEvent("UpdateVolumeParameters"); } return FReply::Handled(); })
+					.ButtonColorAndOpacity_Lambda([this]() { return (GetGlobalState() && GetGlobalState()->quality == 1.0f) ? AccentColor() : FLinearColor::White; })
+					[ SNew(STextBlock).Font(LabelFont()).Text(FText::FromString("High")) ]
+				]
+				+ SHorizontalBox::Slot().FillWidth(1.0f).Padding(2)
+				[
+					SNew(SButton).HAlign(HAlign_Center).VAlign(VAlign_Center)
+					.OnClicked_Lambda([this]() { if (GetGlobalState()) { GetGlobalState()->quality = 2.0f; GetGlobalState()->EmitEvent("UpdateVolumeParameters"); } return FReply::Handled(); })
+					.ButtonColorAndOpacity_Lambda([this]() { return (GetGlobalState() && GetGlobalState()->quality == 2.0f) ? AccentColor() : FLinearColor::White; })
+					[ SNew(STextBlock).Font(LabelFont()).Text(FText::FromString("Very High")) ]
+				]
+				+ SHorizontalBox::Slot().FillWidth(1.0f).Padding(2)
+				[
+					SNew(SButton).HAlign(HAlign_Center).VAlign(VAlign_Center)
+					.OnClicked_Lambda([this]() { if (GetGlobalState()) { GetGlobalState()->quality = 3.0f; GetGlobalState()->EmitEvent("UpdateVolumeParameters"); } return FReply::Handled(); })
+					.ButtonColorAndOpacity_Lambda([this]() { return (GetGlobalState() && GetGlobalState()->quality == 3.0f) ? AccentColor() : FLinearColor::White; })
+					[ SNew(STextBlock).Font(LabelFont()).Text(FText::FromString("GPU Melter")) ]
+				]
+				+ SHorizontalBox::Slot().FillWidth(1.0f).Padding(2)
+				[
+					SNew(SButton).HAlign(HAlign_Center).VAlign(VAlign_Center)
+					.OnClicked_Lambda([this]() { if (GetGlobalState()) { GetGlobalState()->quality = 10.0f; GetGlobalState()->EmitEvent("UpdateVolumeParameters"); } return FReply::Handled(); })
+					.ButtonColorAndOpacity_Lambda([this]() { return (GetGlobalState() && GetGlobalState()->quality == 10.0f) ? AccentColor() : FLinearColor::White; })
+					[ SNew(STextBlock).Font(LabelFont()).Text(FText::FromString("Custom")) ]
+				]
+			]
 		]
-
+		
 		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
 		[
-			MakeSlider(TEXT("Max FPS"), 
-				[this]() { return GetGlobalState() ? (GetGlobalState()->maxFPS - 20.0f) / 100.0f : 0.0f; },
-				[this](float v) { if (GetGlobalState()) GetGlobalState()->maxFPS = 20.0f + (v * 100.0f); }, 
-				TEXT("Max FPS: {0}"))
+			SNew(SBox)
+			.Visibility_Lambda([this]() { return (GetGlobalState() && GetGlobalState()->quality == 10) ? EVisibility::Visible : EVisibility::Collapsed; })
+			[
+				SNew(SVerticalBox)
+				+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
+				[
+					SNew(STextBlock)
+					.Text_Lambda([this]() { 
+						float val = GetGlobalState() ? GetGlobalState()->qualityCustomStepSize : 5.0f;
+						return FText::FromString(FString::Printf(TEXT("Custom Step Size: %.1f"), val)); 
+					})
+					.Font(LabelFont())
+					.ColorAndOpacity(DimText())
+				]
+				+ SVerticalBox::Slot().AutoHeight()
+				[
+					SNew(SSlider)
+					.Style([]() -> const FSliderStyle* {
+						static FSliderStyle VRSliderStyle = FCoreStyle::Get().GetWidgetStyle<FSliderStyle>("Slider");
+						static bool bStyleInitialized = false;
+						if (!bStyleInitialized) {
+							VRSliderStyle.NormalThumbImage.ImageSize = FVector2D(64, 64);
+							VRSliderStyle.HoveredThumbImage.ImageSize = FVector2D(72, 72);
+							VRSliderStyle.DisabledThumbImage.ImageSize = FVector2D(64, 64);
+							VRSliderStyle.BarThickness = 16.0f;
+							bStyleInitialized = true;
+						}
+						return &VRSliderStyle;
+					}())
+					.Value_Lambda([this]() { return GetGlobalState() ? (GetGlobalState()->qualityCustomStepSize - 0.1f) / 19.9f : 0.0f; })
+					.OnValueChanged_Lambda([this](float v) {
+						if (GetGlobalState()) {
+							GetGlobalState()->qualityCustomStepSize = 0.1f + (v * 19.9f);
+							GetGlobalState()->EmitEvent("UpdateVolumeParameters");
+						}
+					})
+				]
+			]
 		]
-
 
 
 		+ SVerticalBox::Slot().AutoHeight()[ MakeLabel(TEXT("Controls & UI")) ]
@@ -956,6 +1066,14 @@ TSharedRef<SWidget> SVRMenuWidget::BuildSettingsTab()
 
 		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
 		[
+			MakeIntSlider(TEXT("Live Data Frames to Keep"), 
+				[this]() { return GetGlobalState() ? GetGlobalState()->downloadPreviousCount : 10; },
+				[this](int v) { if (GetGlobalState()) GetGlobalState()->downloadPreviousCount = v; }, 
+				5, []() { return 50; })
+		]
+
+		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
+		[
 			MakeSlider(TEXT("Hold on Last Frame"), 
 				[this]() { return GetGlobalState() ? GetGlobalState()->animateHoldEnd / 5.0f : 0.0f; },
 				[this](float v) { if (GetGlobalState()) GetGlobalState()->animateHoldEnd = v * 5.0f; }, 
@@ -980,9 +1098,10 @@ TSharedRef<SWidget> SVRMenuWidget::BuildSettingsTab()
 
 		+ SVerticalBox::Slot().AutoHeight().Padding(FMargin(0,4))
 		[
-			MakeCheckbox(TEXT("Delete Old Scans (Keep 2 Hours)"), 
-				[this]() { return GetGlobalState() && GetGlobalState()->downloadDeleteAfter == 7200.0f; }, 
-				[this](bool v) { if (GetGlobalState()) GetGlobalState()->downloadDeleteAfter = v ? 7200.0f : 0.0f; })
+			MakeIntSlider(TEXT("Delete Old Scans (Hours, 0=Never)"), 
+				[this]() { return GetGlobalState() ? FMath::RoundToInt(GetGlobalState()->downloadDeleteAfter / 3600.0f) : 2; },
+				[this](int v) { if (GetGlobalState()) GetGlobalState()->downloadDeleteAfter = v * 3600.0f; }, 
+				0, []() { return 720; })
 		]
 
 		+ SVerticalBox::Slot().AutoHeight()[ MakeLabel(TEXT("System")) ]
@@ -1020,7 +1139,7 @@ TSharedRef<SWidget> SVRMenuWidget::BuildLegalTab()
 		"- License Agreement: This component of the application is distributed under the terms of the GNU General Public License v2. The software is provided \"AS IS\", without warranty of any kind.\n\n"
 		"SOURCE CODE AVAILABILITY:\n"
 		"The complete machine-readable source code for the Nexrad Spatial development project, including all modifications made to the core radar parsing engine, is publicly hosted and freely available to the community. You can view, clone, or download the full repository at:\n"
-		"[INSERT YOUR PUBLIC GITHUB REPOSITORY URL HERE]"
+		"https://github.com/Trancsfict8/NEXRAD_Spatial"
 	);
 
 	return SNew(SVerticalBox)
@@ -1054,16 +1173,17 @@ TSharedRef<SWidget> SVRMenuWidget::BuildControlsTab()
 			SNew(STextBlock).Font(BodyFont).ColorAndOpacity(FLinearColor::White)
 			.Text(FText::FromString(
 				"Left Controller:\n"
-				"- Left Trigger: Grip/Grab Map\n"
-				"- Left Grip: Grip/Grab Map\n"
+				"- Left Trigger: Move Up (Vertical)\n"
+				"- Left Grip: Move Down (Vertical)\n"
 				"- Left Thumbstick (Up/Down): Move Forward/Backward\n"
 				"- Left Thumbstick (Left/Right): Strafe Left/Right\n"
-				"- Y Button: Toggle VR Wrist Menu\n"
+				"- Menu Button: Toggle VR Wrist Menu\n"
 				"- X Button (Hold): Adjust Inspector Distance (Right Thumbstick Y-Axis)\n\n"
 				"Right Controller:\n"
 				"- Right Trigger: Click / UI Interact / Draw (if enabled)\n"
-				"- Right Grip: Grip/Grab Map\n"
+				"- Right Grip: Unused\n"
 				"- Right Thumbstick (Left/Right): Rotate Camera Left/Right\n"
+				"- Right Thumbstick (Up/Down): Scroll UI\n"
 				"- Right Thumbstick (Press): Toggle Inspector Tool\n"
 				"- A Button (Press): Remove Last Marker\n"
 				"- A Button (Hold 1.0s): Spatial Interrogator (Extracts GPS + Street)\n"

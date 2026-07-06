@@ -269,9 +269,16 @@ void UWeatherAudioManager::UpdateAudioState(float DeltaTime, FVector CameraPos)
     // Check if the user has disabled storm sounds in the settings
     // Also, mute the sounds if the player is under 5000 ft (1524 meters) to avoid ground clutter triggering rain sounds.
     bool bEnableStormSounds = true;
+    float globalVolumeScale = 1.0f;
     if (UWorld* World = GetWorld()) {
         if (ARadarGameStateBase* GameState = World->GetGameState<ARadarGameStateBase>()) {
             bEnableStormSounds = GameState->globalState.enableStormSounds;
+            // Map audioControlMultiplier (1.0 to 10.0, default 5.0) to a volume scale:
+            // 1.0 -> 0.0 (Muted)
+            // 5.0 -> 1.0 (100% Volume)
+            // 10.0 -> 2.25 (225% Volume)
+            globalVolumeScale = (GameState->globalState.audioControlMultiplier - 1.0f) / 4.0f;
+            globalVolumeScale = FMath::Max(0.0f, globalVolumeScale); // Prevent any negative values
             
             if (bEnableStormSounds && GameState->globalState.globe) {
                 SimpleVector3<double> latLonAlt = GameState->globalState.globe->GetLatLonAltDegrees(SimpleVector3<double>(CameraPos.X, CameraPos.Y, CameraPos.Z));
@@ -398,13 +405,16 @@ void UWeatherAudioManager::UpdateAudioState(float DeltaTime, FVector CameraPos)
 
     if (RainAmbientAudio) {
         RainAmbientAudio->SetFloatParameter(FName("RainIntensity"), RainIntensity);
+        RainAmbientAudio->SetVolumeMultiplier(globalVolumeScale);
     }
     if (SevereCoreAudio) {
         SevereCoreAudio->SetFloatParameter(FName("CoreDensity"), CoreDensity);
+        SevereCoreAudio->SetVolumeMultiplier(globalVolumeScale);
     }
     if (HailAudio) {
         HailAudio->SetBoolParameter(FName("IsHailing"), IsHailing);
         HailAudio->SetFloatParameter(FName("HailSize"), HailSize);
+        HailAudio->SetVolumeMultiplier(globalVolumeScale);
     }
 }
 

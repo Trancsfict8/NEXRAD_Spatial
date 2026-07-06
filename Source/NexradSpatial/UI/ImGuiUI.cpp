@@ -577,6 +577,16 @@ void ImGuiUI::MainUI()
 				ImGui::PopItemWidth();
 				SetCustomInputTooltip("How many volumes per second to play through");
 				CustomFloatInput("Time Animation Speed", 1, 20, &globalState.animateSpeed, &globalState.defaults->animateSpeed);
+				
+				ImGui::PushItemWidth(11 * fontSize - ImGui::GetStyle().ItemSpacing.x * 1.5f);
+				ImGui::Text("Live Data Frames to Keep");
+				CustomTooltipForPrevious("Number of files before the current one to download off the internet (frames)");
+				ImGui::SliderInt("##previousFileCount", &globalState.downloadPreviousCount, 5, 50);
+				CustomTooltipForPrevious("Number of files before the current one to download off the internet (frames)");
+				ImGui::SameLine();
+				ResetButton(&globalState.downloadPreviousCount, &globalState.defaults->downloadPreviousCount);
+				ImGui::PopItemWidth();
+
 				CustomFloatInput("Hold on Last Frame (s)", 0, 5, &globalState.animateHoldEnd, &globalState.defaults->animateHoldEnd);
 				ImGui::Checkbox("Cuttoff", &globalState.animateCutoff);
 				CustomTooltipForPrevious("Will animate between a cutoff of zero and the value currently set for cutoff\nThe cutoff must be more than zero for this to work");
@@ -625,54 +635,12 @@ void ImGuiUI::MainUI()
 					SetCustomInputTooltip("How often to check for updated radar files on the internet");
 					CustomFloatInput("Download interval (seconds)", 30, 300, &globalState.downloadPollInterval, &globalState.defaults->downloadPollInterval, CustomInput_SliderOnly | CustomInput_Short);
 					
-					ImGui::PushItemWidth(11 * fontSize - ImGui::GetStyle().ItemSpacing.x * 1.5f);
-					ImGui::Text("Download Previous File Count");
-					CustomTooltipForPrevious("Number of files before the current one to download off the internet");
-					ImGui::InputInt("##previousFileCount", &globalState.downloadPreviousCount);
-					CustomTooltipForPrevious("Number of files before the current one to download off the internet");
-					ImGui::SameLine();
-					ResetButton(&globalState.downloadPreviousCount, &globalState.defaults->downloadPreviousCount);
-					ImGui::PopItemWidth();
 					
-					
-					// delete dropdown
-					static float downloadDeleteAfterLocal = globalState.downloadDeleteAfter;
-					static bool deletePopupOpen = false;
-					const char* comboNames[] = {"Never", "2 Hours", "6 Hours", "12 Hours", "1 Day",  "2 Days",  "7 Days",  "30 Days",  "100 Days",  "1 Year"};
-					float comboValues[] =        {0,       2*3600,     6*3600,    12*3600,    24*3600, 2*24*3600, 7*24*3600, 30*24*3600, 100*24*3600, 365*24*3600};
-					ImGui::Text("Delete files after");
-					ImGui::PushItemWidth(12 * fontSize);
-					EnumCombo("##deleteFilesAfter", &downloadDeleteAfterLocal, comboNames, comboValues, sizeof(comboNames)/sizeof(comboNames[0]));
+					int deleteHours = FMath::RoundToInt(globalState.downloadDeleteAfter / 3600.0f);
+					if (ImGui::SliderInt("Delete files after (Hours, 0=Never)", &deleteHours, 0, 720)) {
+						globalState.downloadDeleteAfter = deleteHours * 3600.0f;
+					}
 					CustomTooltipForPrevious("Automatically delete downloaded radar files when they are older than this amount of time");
-					ImGui::PopItemWidth();
-					if(downloadDeleteAfterLocal > 0 && (globalState.downloadDeleteAfter <= 0 || globalState.downloadDeleteAfter > downloadDeleteAfterLocal) && !deletePopupOpen){
-						// prompt user before possibly deleting files
-						ImGui::OpenPopup("Confirm Delete");
-						deletePopupOpen = true;
-					}else if(downloadDeleteAfterLocal <= 0 || (downloadDeleteAfterLocal > globalState.downloadDeleteAfter && globalState.downloadDeleteAfter > 0)){
-						// already enabled and increasing time so just set the new value
-						globalState.downloadDeleteAfter = downloadDeleteAfterLocal;
-					}
-					if (ImGui::BeginPopup("Confirm Delete")){
-						ImGui::Text("Enabling this will delete downloaded radar files older than the selected time.");
-						ImGui::Separator();
-						ImGui::Text("Are you sure?");
-						if (ImGui::Button("Delete Files", ImVec2(120,0))) {
-							ImGui::CloseCurrentPopup();
-							globalState.downloadDeleteAfter = downloadDeleteAfterLocal;
-						}
-						ImGui::SameLine();
-						if (ImGui::Button("Cancel", ImVec2(120,0))) {
-							ImGui::CloseCurrentPopup();
-						}
-						ImGui::EndPopup();
-					}else if(deletePopupOpen){
-						// popup was closed
-						deletePopupOpen = false;
-						downloadDeleteAfterLocal = globalState.downloadDeleteAfter;
-					}
-					
-					// ImGui::InputFloat("downloadDeleteAfter", &globalState.downloadDeleteAfter);
 					
 					
 					static std::string siteIdSelection = "";
@@ -703,6 +671,16 @@ void ImGuiUI::MainUI()
 						if (ImGui::Button("OK", ImVec2(120,0))) {
 							ImGui::CloseCurrentPopup();
 							globalState.downloadSiteId = siteIdSelection;
+							
+							for (size_t i = 0; i < NexradSites::numberOfSites; i++) {
+								if (NexradSites::sites[i].name == globalState.downloadSiteId) {
+									globalState.teleportLatitude = NexradSites::sites[i].latitude;
+									globalState.teleportLongitude = NexradSites::sites[i].longitude;
+									globalState.EmitEvent("TeleportCamera");
+									break;
+								}
+							}
+
 							if (globalState.historicalMode) {
 								globalState.historicalMode = false;
 								globalState.historicalDownloading = false;

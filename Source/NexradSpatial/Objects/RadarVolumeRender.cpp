@@ -4,6 +4,7 @@
 
 
 #include "RadarVolumeRender.h"
+#include "Engine/Engine.h"
 #include "RadarGameStateBase.h"
 #include "../UI/Native.h"
 #include "Kismet/GameplayStatics.h"
@@ -553,6 +554,33 @@ void ARadarVolumeRender::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 	double now = SystemAPI::CurrentTime();
 	GlobalState* globalState = &GetWorld()->GetGameState<ARadarGameStateBase>()->globalState;
+	
+	// Safety net for GPU Melter and Custom
+	if (globalState->quality == 3 || globalState->quality == 10) {
+		if (DeltaTime > 0.05f) { // Frame took > 50ms (sub 20 FPS)
+			lowFpsAccumulator += DeltaTime;
+			if (lowFpsAccumulator > 3.0f) { // Sustained for 3 seconds
+				if (globalState->quality == 3) {
+					globalState->quality = 0; // Revert to Normal
+					if (GEngine) {
+						GEngine->AddOnScreenDebugMessage(-1, 10.0f, FColor::Red, TEXT("WARNING: GPU Melter caused severe framerate drop. Quality auto-reverted to Normal."), true, FVector2D(2.0f, 2.0f));
+					}
+				} else {
+					globalState->qualityCustomStepSize = 5.0f; // Revert to middle safe default
+					if (GEngine) {
+						GEngine->AddOnScreenDebugMessage(-1, 10.0f, FColor::Red, TEXT("WARNING: Custom step size caused severe framerate drop. Step size auto-reverted to safe default."), true, FVector2D(2.0f, 2.0f));
+					}
+				}
+				globalState->EmitEvent("UpdateVolumeParameters");
+				lowFpsAccumulator = 0.0f;
+			}
+		} else {
+			lowFpsAccumulator = 0.0f;
+		}
+	} else {
+		lowFpsAccumulator = 0.0f;
+	}
+
 	radarCollection->automaticallyAdvance = globalState->animate;
 	radarCollection->autoAdvanceInterval = 1.0f / globalState->animateSpeed;
 	radarCollection->holdOnLastFrameInterval = globalState->animateHoldEnd;

@@ -28,3 +28,7 @@ When debugging complex, persistent, or logical bugs, follow this systematic appr
 
 7. **Bidirectional Application of the Fix**
    - Once a fundamental flaw (like a coordinate mismatch) is found, ensure the fix is applied consistently across the entire lifecycle (e.g., fixing the Input -> System transform, and also the System -> Output transform).
+
+## UI / Slate Formatting Rules
+
+* **SVRMenuWidget Fonts:** When building Slate UI widgets within `SVRMenuWidget.cpp`, do not use `NormalFont()`. Use the natively defined font functions for the VR menu widget: `LabelFont()`, `HeaderFont()`, `TabFont()`, or `CheckboxFont()`.
