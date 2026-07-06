@@ -52,7 +52,7 @@ static FSlateFontInfo CheckboxFont()
 	return FCoreStyle::GetDefaultFontStyle("Bold", 18); // 25% bigger than 14
 }
 
-static FLinearColor AccentColor() { return FLinearColor(0.0f, 1.0f, 0.5f); } // #00ff80
+static FLinearColor AccentColor() { return FLinearColor(FColor(245, 218, 43, 255)); } // Nexrad Logo Gold
 static FLinearColor DimText()    { return FLinearColor(0.7f, 0.7f, 0.7f); }
 
 void SVRMenuWidget::Construct(const FArguments& InArgs)
@@ -63,7 +63,8 @@ void SVRMenuWidget::Construct(const FArguments& InArgs)
 	ChildSlot
 	[
 		SNew(SBorder)
-		.BorderBackgroundColor(FLinearColor(FColor(15, 23, 42, 242))) // Slate blue base (sRGB to Linear converted automatically via FColor constructor)
+		.BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush"))
+		.BorderBackgroundColor(FLinearColor(FColor(14, 30, 46, 240))) // Nexrad Logo Dark Blue base
 		.Padding(FMargin(0))
 		[
 			SNew(SVerticalBox)
@@ -73,7 +74,8 @@ void SVRMenuWidget::Construct(const FArguments& InArgs)
 			.AutoHeight()
 			[
 				SNew(SBorder)
-				.BorderBackgroundColor(FLinearColor(FColor(30, 41, 59, 255))) // Slightly lighter slate (sRGB to Linear)
+				.BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush"))
+				.BorderBackgroundColor(FLinearColor(FColor(20, 38, 56, 255))) // Nexrad Logo Lighter Blue header
 				.Padding(FMargin(16, 10))
 				[
 					SNew(SHorizontalBox)
