@@ -90,6 +90,7 @@ void SVRMenuWidget::Construct(const FArguments& InArgs)
 								LogoBrush = new FSlateBrush();
 								UTexture2D* LogoTex = LoadObject<UTexture2D>(nullptr, TEXT("/Game/Textures/NEXRADSpatial_logo.NEXRADSpatial_logo"));
 								if (LogoTex) {
+									LogoTex->AddToRoot();
 									LogoBrush->SetResourceObject(LogoTex);
 									LogoBrush->ImageSize = FVector2D(38.4f, 38.4f); // 20% bigger than original 32x32
 								}

@@ -8,6 +8,7 @@ class AsyncTaskRunner;
 #include <vector>
 #include <string>
 #include <atomic>
+#include <mutex>
 
 class RadarCollection;
 class RadarProduct;
@@ -100,6 +101,8 @@ public:
 	std::vector<ProductHolder*> products;
 	// map of radar products that point to products
 	std::map<RadarData::VolumeType, ProductHolder*> productsMap;
+	
+	std::mutex lock;
 	
 	RadarDataSettings radarDataSettings;
 	

@@ -4,6 +4,7 @@
 #include "GameFramework/Actor.h"
 #include "Interfaces/IHttpRequest.h"
 #include "Materials/Material.h"
+#include <vector>
 
 class UInstancedStaticMeshComponent;
 class UTextRenderComponent;
@@ -72,6 +73,7 @@ public:
     TArray<FStormAttr> currentAttributes;
     FCriticalSection attributesMutex;
 private:
+    std::vector<int> callbackIds;
     
     TArray<UTextRenderComponent*> TextComponents;
     TArray<UTextRenderComponent*> EchoTopTextComponents;

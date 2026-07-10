@@ -34,7 +34,7 @@ public:
 		//radarData->ReadNexrad(path.c_str());
 		
 		std::vector<RadarDataHolder::ProductHolder *> productsList;
-		lock.lock();
+		radarHolder->lock.lock();
 		if(!canceled){
 			// make a copy of the array and increment the reference counters to prevent deletion during use
 			productsList = radarHolder->products;
@@ -42,7 +42,7 @@ public:
 				productHolder->StartUsing();
 			}
 		}
-		lock.unlock();
+		radarHolder->lock.unlock();
 		
 		
 		int baseProductToLoadCount = 0;
@@ -116,7 +116,7 @@ public:
 							/*if(radarHolder->productsMap.find(type) != radarHolder->productsMap.end()){
 								addDependencies = true;
 							}*/
-							lock.lock();
+							radarHolder->lock.lock();
 							if(!canceled){
 								auto dependency = radarHolder->GetProduct(type);
 								// check if dependency is in local productsList array and add it if not
@@ -135,11 +135,11 @@ public:
 									dependencyDataHolders.push_back(dependency);
 								}else{
 									dependenciesMet = false;
-									lock.unlock();
+									radarHolder->lock.unlock();
 									break;
 								}
 							}
-							lock.unlock();
+							radarHolder->lock.unlock();
 						}
 						if(dependenciesMet){
 							for(auto &dependencyHolder : dependencyDataHolders){
@@ -191,7 +191,7 @@ public:
 					productHoldersToKeep.push_back(productHolder);
 				}
 			}
-			lock.lock();
+			radarHolder->lock.lock();
 			if(!canceled){
 				radarHolder->products = productHoldersToKeep;
 				productsList = productHoldersToKeep;
@@ -202,14 +202,14 @@ public:
 				}
 				
 			}
-			lock.unlock();
+			radarHolder->lock.unlock();
 		}
 		
 		// compress all products to save memory
 		if(!canceled && initialUid == radarHolder->uid){
-			int productCount = radarHolder->products.size();
+			int productCount = productsList.size();
 			for(int i = 0; i < productCount && !canceled; i++){
-				auto productHolder = radarHolder->products[i];
+				auto productHolder = productsList[i];
 				if(productHolder->radarData != NULL){
 					productHolder->StartUsing();
 					productHolder->radarData->Decompress();
@@ -229,7 +229,7 @@ public:
 		// }
 		
 		// check if main one is loaded and output
-		lock.lock();
+		radarHolder->lock.lock();
 		if(!canceled && initialUid == radarHolder->uid){
 			if(radarHolder->productsMap.find(radarSettings.volumeType) != radarHolder->productsMap.end()){
 				auto productHolder = radarHolder->productsMap[radarSettings.volumeType];
@@ -254,7 +254,7 @@ public:
 		if(!canceled){
 			radarHolder->loader = NULL;
 		}
-		lock.unlock();
+		radarHolder->lock.unlock();
 	}
 };
 
@@ -323,6 +323,7 @@ void RadarDataHolder::Load(RadarFile file){
 }
 
 void RadarDataHolder::Load(){
+	lock.lock();
 	// cancel any existing async tasks
 	for(auto task : asyncTasks){
 		task->Cancel();
@@ -341,10 +342,6 @@ void RadarDataHolder::Load(){
 		}
 	}
 
-	
-	
-	
-	
 	// add dependencies to requested outputs
 	bool addDependencies = true;
 	while(addDependencies){
@@ -372,9 +369,11 @@ void RadarDataHolder::Load(){
 			this
 		));
 	}
+	lock.unlock();
 }
 
 void RadarDataHolder::Unload() {
+	lock.lock();
 	if(loader != NULL){
 		loader->Cancel();
 		loader = NULL;
@@ -398,6 +397,7 @@ void RadarDataHolder::Unload() {
 	}
 	products.clear();
 	productsMap.clear();
+	lock.unlock();
 }
 
 double RadarFile::ParseFileNameDate(std::string filename) {

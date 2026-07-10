@@ -110,7 +110,7 @@ void AGISPolyline::DisplayObject(GISObject* object, GISGroup* group){
 			subPoint.Add(pointOffset);
 			subPoint = globe.GetLocationScaled(subPoint);
 			float elevation = ElevationData::GetDataAtPointRadians(subPoint.z, subPoint.y);
-			subPoint.radius() = 500 + (elevation * elevExag);
+			subPoint.radius() = 100 + (elevation * elevExag);
 			subPoint = globe.GetPointScaled(subPoint);
 			vertices.Add(SimpleVector3ToFVector(subPoint + outwards));
 			vertices.Add(SimpleVector3ToFVector(subPoint - outwards));

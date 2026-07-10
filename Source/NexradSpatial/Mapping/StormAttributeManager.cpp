@@ -61,6 +61,13 @@ void AStormAttributeManager::BeginPlay()
 {
     Super::BeginPlay();
     
+    if (GetWorld()->GetGameState<ARadarGameStateBase>()) {
+        GlobalState* globalState = &GetWorld()->GetGameState<ARadarGameStateBase>()->globalState;
+        callbackIds.push_back(globalState->RegisterEvent("GlobeUpdate", [this](std::string stringData, void* extraData) {
+            meshesDirty = true;
+        }));
+    }
+
     UMaterial* baseMat = LoadObject<UMaterial>(nullptr, TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial"));
     if (baseMat) {
         UMaterialInstanceDynamic* dynTvs = UMaterialInstanceDynamic::Create(baseMat, this);
@@ -93,6 +100,12 @@ void AStormAttributeManager::BeginPlay()
 
 void AStormAttributeManager::EndPlay(const EEndPlayReason::Type endPlayReason)
 {
+    if (GetWorld()->GetGameState<ARadarGameStateBase>()) {
+        GlobalState* globalState = &GetWorld()->GetGameState<ARadarGameStateBase>()->globalState;
+        for (auto id : callbackIds) {
+            globalState->UnregisterEvent(id);
+        }
+    }
     Super::EndPlay(endPlayReason);
 }
 
@@ -277,11 +290,12 @@ void AStormAttributeManager::UpdateMeshes()
     GlobalState* globalState = &GetWorld()->GetGameState<ARadarGameStateBase>()->globalState;
     if (!globalState || !globalState->refRadarCollection) return;
     
-    double siteLat = 0, siteLon = 0;
+    double siteLat = 0, siteLon = 0, siteAlt = 0;
     RadarDataHolder* holder = globalState->refRadarCollection->GetCurrentRadarData();
     if (holder && holder->radarData) {
         siteLat = holder->radarData->stats.latitude;
         siteLon = holder->radarData->stats.longitude;
+        siteAlt = holder->radarData->stats.altitude;
     }
 
     if (siteLat == 0 && siteLon == 0) return; // No radar data loaded to reference
@@ -291,11 +305,12 @@ void AStormAttributeManager::UpdateMeshes()
     for (const FStormAttr& attr : currentAttributes) {
         if (attr.type == TEXT("TVS") && globalState->showLevel3StormAttributes) {
             // Position TVS higher so it hovers above any hail sphere and text
-            float altitudeMeters = (attr.top > 0.0f) ? (attr.top * 1000.0f * 0.3048f) : 12192.0f;
+            float attrHeight = (attr.top > 0.0f) ? (attr.top * 1000.0f * 0.3048f) : 12192.0f;
             
             // TVS cone points down (rotated 180). With scale 0.8, it's 8000m tall.
             // Placing its base at altitude + 13500m puts its tip at altitude + 5500m (just above hail text at 4500m).
-            SimpleVector3<double> loc = globalState->globe->GetPointScaledDegrees(attr.lat, attr.lon, (altitudeMeters + 13500.0f) * globalState->elevationExaggeration);
+            double finalAlt = (siteAlt * globalState->elevationExaggeration) + ((attrHeight + 13500.0f) * globalState->verticalScale);
+            SimpleVector3<double> loc = globalState->globe->GetPointScaledDegrees(attr.lat, attr.lon, finalAlt);
             FTransform transform;
             transform.SetLocation(FVector(loc.x, loc.y, loc.z));
             
@@ -306,9 +321,10 @@ void AStormAttributeManager::UpdateMeshes()
         } else if (attr.type == TEXT("HAIL") && globalState->showLevel3StormAttributes) {
             // HAIL
             // Use attr.top * 1000.0f * 0.3048f as altitude in meters, fallback to 12192 (40k ft) if missing
-            float altitudeMeters = (attr.top > 0.0f) ? (attr.top * 1000.0f * 0.3048f) : 12192.0f;
+            float attrHeight = (attr.top > 0.0f) ? (attr.top * 1000.0f * 0.3048f) : 12192.0f;
             
-            SimpleVector3<double> loc = globalState->globe->GetPointScaledDegrees(attr.lat, attr.lon, altitudeMeters * globalState->elevationExaggeration);
+            double finalAlt = (siteAlt * globalState->elevationExaggeration) + (attrHeight * globalState->verticalScale);
+            SimpleVector3<double> loc = globalState->globe->GetPointScaledDegrees(attr.lat, attr.lon, finalAlt);
 
             FTransform transform;
             transform.SetLocation(FVector(loc.x, loc.y, loc.z));
@@ -354,11 +370,13 @@ void AStormAttributeManager::UpdateMeshes()
             TopComp->SetText(FText::FromString(FString::Printf(TEXT("%.0f ft AGL"), attr.top * 1000.0f)));
             
             // Hail size text higher up
-            SimpleVector3<double> locText = globalState->globe->GetPointScaledDegrees(attr.lat, attr.lon, (altitudeMeters + 4500) * globalState->elevationExaggeration);
+            double finalAltText = (siteAlt * globalState->elevationExaggeration) + ((attrHeight + 4500.0f) * globalState->verticalScale);
+            SimpleVector3<double> locText = globalState->globe->GetPointScaledDegrees(attr.lat, attr.lon, finalAltText);
             TextComp->SetWorldLocation(FVector(locText.x, locText.y, locText.z)); 
             
             // Echo top text slightly lower than hail size, but above sphere
-            SimpleVector3<double> locTopText = globalState->globe->GetPointScaledDegrees(attr.lat, attr.lon, (altitudeMeters + 2800) * globalState->elevationExaggeration);
+            double finalAltTopText = (siteAlt * globalState->elevationExaggeration) + ((attrHeight + 2800.0f) * globalState->verticalScale);
+            SimpleVector3<double> locTopText = globalState->globe->GetPointScaledDegrees(attr.lat, attr.lon, finalAltTopText);
             TopComp->SetWorldLocation(FVector(locTopText.x, locTopText.y, locTopText.z)); 
             
             // Billboarding: face the camera
@@ -391,8 +409,9 @@ void AStormAttributeManager::UpdateMeshes()
                 double endLon = attr.lon + (endDistKm * sin(headingRad) / (earthRadiusKm * cos(FMath::DegreesToRadians(attr.lat)))) * (180.0 / PI);
                 
                 // 9000 ft = 2743.2 meters AGL (3 times higher)
-                SimpleVector3<double> locStart = globalState->globe->GetPointScaledDegrees(startLat, startLon, 2743.2 * globalState->elevationExaggeration);
-                SimpleVector3<double> locEnd = globalState->globe->GetPointScaledDegrees(endLat, endLon, 2743.2 * globalState->elevationExaggeration);
+                double trackAlt = (siteAlt * globalState->elevationExaggeration) + (2743.2 * globalState->verticalScale);
+                SimpleVector3<double> locStart = globalState->globe->GetPointScaledDegrees(startLat, startLon, trackAlt);
+                SimpleVector3<double> locEnd = globalState->globe->GetPointScaledDegrees(endLat, endLon, trackAlt);
                 
                 FVector StartVec(locStart.x, locStart.y, locStart.z);
                 FVector EndVec(locEnd.x, locEnd.y, locEnd.z);
