@@ -71,34 +71,39 @@ bool RadarData::LoadNexradVolume(void* nexradData, VolumeType volumeType) {
 
 void RadarData::CopyFrom(RadarData* data, bool metadataOnly) {
 	if(buffer == NULL || thetaBufferCount != data->thetaBufferCount || sweepBufferCount != data->sweepBufferCount || radiusBufferCount != data->radiusBufferCount){
-		//if (radiusBufferCount == 0) {
+		bool sweepChanged = sweepBufferCount != data->sweepBufferCount;
+		bool thetaChanged = thetaBufferCount != data->thetaBufferCount;
+
 		radiusBufferCount = data->radiusBufferCount;
-		//}
-		//if (sweepBufferCount == 0) {
-		if(sweepBufferCount != data->sweepBufferCount){
+		
+		if(sweepChanged){
 			if(sweepInfo != NULL){
-				delete sweepInfo;
+				delete[] sweepInfo;
 			}
 			sweepInfo = new SweepInfo[data->sweepBufferCount]();
 		}
-		sweepBufferCount = data->sweepBufferCount;
-		//}
-		//if (thetaBufferCount == 0) {
-		if(thetaBufferCount != data->thetaBufferCount || sweepBufferCount != data->sweepBufferCount){
+		
+		if(thetaChanged || sweepChanged){
 			if(rayInfo != NULL){
-				delete rayInfo;
+				delete[] rayInfo;
 			}
 			rayInfo = new RayInfo[data->sweepBufferCount * (data->thetaBufferCount + 2)]();
 		}
+		
+		sweepBufferCount = data->sweepBufferCount;
 		thetaBufferCount = data->thetaBufferCount;
-		//}
 		
 		thetaBufferSize = radiusBufferCount;
 		sweepBufferSize = (thetaBufferCount + 2) * thetaBufferSize;
 		fullBufferSize = sweepBufferCount * sweepBufferSize;
 		
 		if(buffer != NULL){
-			delete buffer;
+			delete[] buffer;
+			buffer = NULL;
+		}
+		if(buffer8Bit != NULL){
+			delete[] buffer8Bit;
+			buffer8Bit = NULL;
 		}
 		if(!metadataOnly){
 			// allocate buffer

@@ -267,15 +267,11 @@ for(int step = 0; step <= maxSteps && alpha < 0.90; step++){
 	
 	if(intMode == 0){
 		// get pixel value
-		
 		uint dataLine = thetaInt + (sweepInt) * thetaSize2;
-		uint actualDataLine = dataLine / raysPerLine;
-		uint dataLineOffset = dataLine % raysPerLine;
-		dataLineOffset *= radiusSize;
+		uint actualDataLine = dataLine / (uint)raysPerLine;
+		uint dataLineOffset = (dataLine % (uint)raysPerLine) * (uint)radiusSize;
 		
 		float localValue = UNNORMALIZE(volume[uint2(radiusInt + dataLineOffset, actualDataLine)].r);
-		
-		
 		
 		// get color and alpha from valueIndex using localValue as the index
 		int mappedValueIndex = saturate((localValue - valueIndexLower) / (valueIndexUpper - valueIndexLower)) * 16383;
@@ -298,14 +294,33 @@ for(int step = 0; step <= maxSteps && alpha < 0.90; step++){
 		theta -= 0.5;
 		thetaInt = theta;
 		sweepInt = sweep;
-		float localValue000 = UNNORMALIZE(volume[uint2(radiusInt,     thetaInt +     (sweepInt    ) * thetaSize2)].r);
-		float localValue100 = UNNORMALIZE(volume[uint2(radiusInt + 1, thetaInt +     (sweepInt    ) * thetaSize2)].r);
-		float localValue010 = UNNORMALIZE(volume[uint2(radiusInt,     thetaInt + 1 + (sweepInt    ) * thetaSize2)].r);
-		float localValue110 = UNNORMALIZE(volume[uint2(radiusInt + 1, thetaInt + 1 + (sweepInt    ) * thetaSize2)].r);
-		float localValue001 = UNNORMALIZE(volume[uint2(radiusInt,     thetaInt +     (sweepInt + 1) * thetaSize2)].r);
-		float localValue101 = UNNORMALIZE(volume[uint2(radiusInt + 1, thetaInt +     (sweepInt + 1) * thetaSize2)].r);
-		float localValue011 = UNNORMALIZE(volume[uint2(radiusInt,     thetaInt + 1 + (sweepInt + 1) * thetaSize2)].r);
-		float localValue111 = UNNORMALIZE(volume[uint2(radiusInt + 1, thetaInt + 1 + (sweepInt + 1) * thetaSize2)].r);
+		
+		uint dl00 = thetaInt + (sweepInt) * thetaSize2;
+		uint adl00 = dl00 / (uint)raysPerLine;
+		uint do00 = (dl00 % (uint)raysPerLine) * (uint)radiusSize;
+
+		uint dl10 = thetaInt + 1 + (sweepInt) * thetaSize2;
+		uint adl10 = dl10 / (uint)raysPerLine;
+		uint do10 = (dl10 % (uint)raysPerLine) * (uint)radiusSize;
+
+		uint dl01 = thetaInt + (sweepInt + 1) * thetaSize2;
+		uint adl01 = dl01 / (uint)raysPerLine;
+		uint do01 = (dl01 % (uint)raysPerLine) * (uint)radiusSize;
+
+		uint dl11 = thetaInt + 1 + (sweepInt + 1) * thetaSize2;
+		uint adl11 = dl11 / (uint)raysPerLine;
+		uint do11 = (dl11 % (uint)raysPerLine) * (uint)radiusSize;
+
+		int radiusIntNext = min(radiusInt + 1, (int)radiusSize - 1);
+
+		float localValue000 = UNNORMALIZE(volume[uint2(radiusInt + do00, adl00)].r);
+		float localValue100 = UNNORMALIZE(volume[uint2(radiusIntNext + do00, adl00)].r);
+		float localValue010 = UNNORMALIZE(volume[uint2(radiusInt + do10, adl10)].r);
+		float localValue110 = UNNORMALIZE(volume[uint2(radiusIntNext + do10, adl10)].r);
+		float localValue001 = UNNORMALIZE(volume[uint2(radiusInt + do01, adl01)].r);
+		float localValue101 = UNNORMALIZE(volume[uint2(radiusIntNext + do01, adl01)].r);
+		float localValue011 = UNNORMALIZE(volume[uint2(radiusInt + do11, adl11)].r);
+		float localValue111 = UNNORMALIZE(volume[uint2(radiusIntNext + do11, adl11)].r);
 		
 		localValue000 = max(localValue000, valueIndexLower);
 		localValue100 = max(localValue100, valueIndexLower);
@@ -337,7 +352,11 @@ for(int step = 0; step <= maxSteps && alpha < 0.90; step++){
 	
 	
 	if(intMode == 2){
-		float localValue = UNNORMALIZE(volume[uint2(radiusInt, thetaInt + (sweepInt) * thetaSize2)].r);
+		uint dataLine = thetaInt + (sweepInt) * thetaSize2;
+		uint actualDataLine = dataLine / (uint)raysPerLine;
+		uint dataLineOffset = (dataLine % (uint)raysPerLine) * (uint)radiusSize;
+		
+		float localValue = UNNORMALIZE(volume[uint2(radiusInt + dataLineOffset, actualDataLine)].r);
 		
 		localColor = F::HUEtoRGB((distance(location,cameraPos) / 300) % 1) * 1;
 		

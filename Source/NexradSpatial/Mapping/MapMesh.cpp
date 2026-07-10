@@ -77,7 +77,7 @@ public:
 		this->tile = tile;
 	}
 	
-	UTexture2D* CreateTexture(UObject* Outer, const TArray64<uint8>& PixelData, int32 InSizeX, int32 InSizeY, EPixelFormat InFormat, FName BaseName)
+	static UTexture2D* CreateTexture(UObject* Outer, const TArray64<uint8>& PixelData, int32 InSizeX, int32 InSizeY, EPixelFormat InFormat, FName BaseName)
 	{
 		// based on UTexture2D::CreateTransient with a few modifications
 		if (InSizeX <= 0 || InSizeY <= 0 ||
@@ -143,20 +143,22 @@ public:
 			return;
 		}
 
-		//FName TextureName = MakeUniqueObjectName(GetTransientPackage(), UTexture2D::StaticClass(),  TEXT("TileTexture"));
-		//UTexture2D* texture = UTexture2D::CreateTransient(imageWrapper->GetWidth(), imageWrapper->GetHeight(), EPixelFormat::PF_B8G8R8A8, TextureName);
-		//texture->UpdateResource();
-		UTexture2D* texture = CreateTexture(weakMesh.Get(), rawData, imageWrapper->GetWidth(), imageWrapper->GetHeight(), EPixelFormat::PF_B8G8R8A8,TEXT("TileTexture"));
-		// texture->ConditionalBeginDestroy();
-		
-		if (canceled) {
-			return;
-		}
-		AMapMesh* mesh = weakMesh.Get();
-		if (mesh) {
-			mesh->texture = texture;
-			mesh->pendingTexture = true;
-		}
+		int32 width = imageWrapper->GetWidth();
+		int32 height = imageWrapper->GetHeight();
+		TWeakObjectPtr<AMapMesh> localWeakMesh = weakMesh;
+		bool localCanceled = canceled;
+
+		AsyncTask(ENamedThreads::GameThread, [localWeakMesh, rawData = MoveTemp(rawData), width, height, localCanceled]() {
+			if (localCanceled || !localWeakMesh.IsValid()) return;
+			
+			UTexture2D* texture = CreateTexture(localWeakMesh.Get(), rawData, width, height, EPixelFormat::PF_B8G8R8A8, TEXT("TileTexture"));
+			
+			AMapMesh* mesh = localWeakMesh.Get();
+			if (mesh) {
+				mesh->texture = texture;
+				mesh->pendingTexture = true;
+			}
+		});
 	}
 };
 

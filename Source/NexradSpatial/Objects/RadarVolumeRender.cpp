@@ -65,7 +65,7 @@ void UpdateTexture(UTexture2D* texture, uint8_t* buffer, size_t bufferSizeBytes,
 	regions[0].Height = std::min(bufferSizeBytes / pixelSizeBytes / width, (size_t)texture->GetSizeY());
 	
 	texture->UpdateTextureRegions(0, 1, regions, width * pixelSizeBytes, pixelSizeBytes, (uint8*)buffer, [callback](uint8* dataPtr, const FUpdateTextureRegion2D* regionsPtr) {
-		delete regionsPtr;
+		delete[] regionsPtr;
 		callback(dataPtr);
 	});
 }
@@ -392,9 +392,13 @@ void ARadarVolumeRender::HandleRadarDataEvent(RadarCollection::RadarUpdateEvent 
 		if (radarData->buffer8Bit != NULL) {
 			radarMaterialInstance->SetScalarParameterValue(TEXT("DataMin"), radarData->stats.minValue);
 			radarMaterialInstance->SetScalarParameterValue(TEXT("DataMax"), radarData->stats.maxValue);
-			UpdateTexture(textureToUpdate, radarData->buffer8Bit, radarData->fullBufferSize * sizeof(uint8_t), sizeof(uint8_t));
+			uint8_t* copiedBuffer = new uint8_t[radarData->fullBufferSize * sizeof(uint8_t)];
+			FMemory::Memcpy(copiedBuffer, radarData->buffer8Bit, radarData->fullBufferSize * sizeof(uint8_t));
+			UpdateTexture(textureToUpdate, copiedBuffer, radarData->fullBufferSize * sizeof(uint8_t), sizeof(uint8_t), [](uint8_t* buffer){ delete[] buffer; });
 		} else {
-			UpdateTexture(textureToUpdate, (uint8_t*)radarData->buffer, radarData->fullBufferSize * sizeof(float), sizeof(float));
+			uint8_t* copiedBuffer = new uint8_t[radarData->fullBufferSize * sizeof(float)];
+			FMemory::Memcpy(copiedBuffer, radarData->buffer, radarData->fullBufferSize * sizeof(float));
+			UpdateTexture(textureToUpdate, copiedBuffer, radarData->fullBufferSize * sizeof(float), sizeof(float), [](uint8_t* buffer){ delete[] buffer; });
 		}
 		
 		// Orient globe to match up with radar
