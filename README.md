@@ -40,14 +40,7 @@ For more information, visit our website at [NexradSpatial.com](https://NexradSpa
   * **B Button (Press)**: Toggle 3D drawing tool.
   * **B Button (Hold) + Trigger**: Erase drawn line. Hold B for 3 seconds to clear all lines.
 
-#### Desktop Mode
-* **W / A / S / D** (or Arrow Keys): Fly forward, backward, left, and right.
-* **E / Q**: Ascend / Descend.
-* **Left Shift**: Speed boost.
-* **Mouse**: Look and rotate view (hold Right Click to look).
-* **Left Click**: Select options and interact with UI.
 
----
 
 ### Key Features & Workflow
 
