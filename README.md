@@ -6,7 +6,7 @@ Nexrad Spatial is an immersive, fully 3D volumetric weather radar and data visua
 
 ## Releases
 
-**Version 1.02** is now officially released and completely free to download! Precompiled binaries can be found directly on the GitHub [Releases](https://github.com/Trancsfict8/Openstorm-VR/releases) page.
+**Version 1.02** is now officially released and completely free to download! Precompiled binaries can be found directly on the GitHub [Releases](https://github.com/Trancsfict8/NEXRAD_Spatial/releases) page.
 
 For more information, visit our website at [NexradSpatial.com](https://NexradSpatial.com) or join the community on the [Nexrad Spatial Discord Server](https://discord.gg/RHXm935w7s).
 
@@ -15,7 +15,7 @@ For more information, visit our website at [NexradSpatial.com](https://NexradSpa
 ## How to Use
 
 ### Getting Started
-1. Download the latest build from the [Releases](https://github.com/Trancsfict8/Openstorm-VR/releases) section.
+1. Download the latest build from the [Releases](https://github.com/Trancsfict8/NEXRAD_Spatial/releases) section.
 2. Extract the archive and launch `NexradSpatial.exe`.
 3. Works out of the box with OpenXR-compatible VR headsets (Meta Quest via Link/AirLink/Virtual Desktop, Valve Index, HTC Vive, WMR) or in desktop mode.
 
