@@ -60,6 +60,20 @@ void SVRMenuWidget::Construct(const FArguments& InArgs)
 	CachedGlobalState = nullptr;
 	ActiveTab = EVRMenuTab::Radar;
 
+	static FSlateBrush LogoBrush;
+	static bool bLogoInitialized = false;
+	if (!bLogoInitialized)
+	{
+		bLogoInitialized = true;
+		UTexture2D* LogoTex = LoadObject<UTexture2D>(nullptr, TEXT("/Game/Textures/NEXRADSpatial_logo.NEXRADSpatial_logo"));
+		if (LogoTex)
+		{
+			LogoTex->AddToRoot();
+			LogoBrush.SetResourceObject(LogoTex);
+			LogoBrush.ImageSize = FVector2D(38.4f, 38.4f);
+		}
+	}
+
 	ChildSlot
 	[
 		SNew(SBorder)
@@ -84,19 +98,7 @@ void SVRMenuWidget::Construct(const FArguments& InArgs)
 					.Padding(0, 0, 10, 0)
 					[
 						SNew(SImage)
-						.Image_Lambda([]() -> const FSlateBrush* {
-							static FSlateBrush* LogoBrush = nullptr;
-							if (!LogoBrush) {
-								LogoBrush = new FSlateBrush();
-								UTexture2D* LogoTex = LoadObject<UTexture2D>(nullptr, TEXT("/Game/Textures/NEXRADSpatial_logo.NEXRADSpatial_logo"));
-								if (LogoTex) {
-									LogoTex->AddToRoot();
-									LogoBrush->SetResourceObject(LogoTex);
-									LogoBrush->ImageSize = FVector2D(38.4f, 38.4f); // 20% bigger than original 32x32
-								}
-							}
-							return LogoBrush;
-						})
+						.Image(&LogoBrush)
 					]
 					+ SHorizontalBox::Slot()
 					.VAlign(VAlign_Center)

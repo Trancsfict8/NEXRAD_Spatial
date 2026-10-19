@@ -103,7 +103,7 @@ std::shared_ptr<Tile> TileProvider::GetTile(int zoom, int y, int x){
 	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> HttpRequest = FHttpModule::Get().CreateRequest();
 	HttpRequest->SetVerb("GET");
 	HttpRequest->SetURL(fUrl);
-	HttpRequest->SetHeader("User-Agent", "OpenStormVR/1.0");
+	HttpRequest->SetHeader("User-Agent", "NEXRADSpatial/1.0 (https://github.com/T-roy/NEXRAD_Spatial)");
 
 	HttpRequest->OnProcessRequestComplete().BindLambda([tile, this](FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful) {
 		if (bWasSuccessful && Response.IsValid() && Response->GetResponseCode() == 200) {

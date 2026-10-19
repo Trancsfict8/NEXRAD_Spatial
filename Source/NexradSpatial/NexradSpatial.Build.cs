@@ -16,7 +16,7 @@ public class NexradSpatial : ModuleRules
 		PrivateDependencyModuleNames.AddRange(new string[] { "InputCore", "ImGui", "AudioCaptureCore", "ProceduralMeshComponent", "ImageWrapper", "RHI", "Json", "HTTP", "XRBase", "EnhancedInput", "AudioMixer", "MetasoundEngine", "MetasoundFrontend" });
 		
 		bEnableExceptions = true;
-		bUseRTTI = true;
+		bUseRTTI = false;
 		bWarningsAsErrors = false;
 		
 		// string pluginsLocation = Path.Combine(ModuleDirectory, "../../Plugins");

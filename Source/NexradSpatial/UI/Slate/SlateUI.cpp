@@ -63,6 +63,7 @@ void ASlateUI::EndPlay(const EEndPlayReason::Type endPlayReason) {
 			
 		//gameViewport->RemoveViewportWidgetContent(hudWidget.ToSharedRef());
 	}
+	Super::EndPlay(endPlayReason);
 }
 
 void ASlateUI::Tick(float DeltaTime){

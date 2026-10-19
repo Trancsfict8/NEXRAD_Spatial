@@ -184,7 +184,7 @@ void AStormAttributeManager::FetchStormAttributes()
     TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = FHttpModule::Get().CreateRequest();
     Request->SetURL(url);
     Request->SetVerb("GET");
-    Request->SetHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 OpenStormVR/1.0");
+    Request->SetHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 NEXRADSpatial/1.0 (https://github.com/T-roy/NEXRAD_Spatial)");
     Request->OnProcessRequestComplete().BindUObject(this, &AStormAttributeManager::OnAttributesFetched);
     Request->ProcessRequest();
 }

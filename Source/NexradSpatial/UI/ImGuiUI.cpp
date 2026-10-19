@@ -14,11 +14,13 @@
 #include "../EngineHelpers/StringUtils.h"
 #include "./portable-file-dialogs.h"
 #include "./ClickableInterface.h"
+#if PLATFORM_WINDOWS
 #include "Windows/AllowWindowsPlatformTypes.h"
 #include <windows.h>
 #include <commdlg.h>
 #include <shobjidl.h>
 #include "Windows/HideWindowsPlatformTypes.h"
+#endif
 
 #include "HttpModule.h"
 #include "Interfaces/IHttpRequest.h"

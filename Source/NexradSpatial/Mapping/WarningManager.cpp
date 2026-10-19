@@ -160,7 +160,7 @@ void AWarningManager::FetchWarnings()
 	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> httpRequest = FHttpModule::Get().CreateRequest();
 	httpRequest->SetURL("https://api.weather.gov/alerts/active");
 	httpRequest->SetVerb("GET");
-	httpRequest->SetHeader("User-Agent", "OpenStormVR (contact@openstorm.vr)");
+	httpRequest->SetHeader("User-Agent", "NEXRADSpatial/1.0 (https://github.com/T-roy/NEXRAD_Spatial)");
 	httpRequest->OnProcessRequestComplete().BindUObject(this, &AWarningManager::OnWarningsFetched);
 	httpRequest->ProcessRequest();
 }

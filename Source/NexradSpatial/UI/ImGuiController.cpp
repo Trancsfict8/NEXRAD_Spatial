@@ -189,7 +189,7 @@ void AImGuiController::LeftClick() {
 		if(hitActor != NULL){
 			selectedActor = hitActor;
 			// fprintf(stderr, "%s\n", StringUtils::FStringToSTDString(hitActor->GetName()).c_str());
-			if(dynamic_cast<IClickableInterface*>(hitActor) != NULL){
+			if(Cast<IClickableInterface>(hitActor) != NULL){
 				
 			}
 		}else{
@@ -208,7 +208,7 @@ void AImGuiController::LeftClick() {
 		isLeftClicking = false;
 		if(selectedActor != NULL){
 			//fprintf(stderr, "Clicking on actor %s\n", StringUtils::FStringToSTDString(selectedActor->GetName()).c_str());
-			IClickableInterface* clickable = dynamic_cast<IClickableInterface*>(selectedActor);
+			IClickableInterface* clickable = Cast<IClickableInterface>(selectedActor);
 			if(clickable != NULL){
 				clickable->OnClick();
 			}

@@ -14,6 +14,11 @@
 #include <algorithm>
 #include <string>
 #include <vector>
+#include <cstring>
+
+#if !PLATFORM_WINDOWS
+#define strtok_s strtok_r
+#endif
 
 class HTTPDownloader{
 public:
@@ -45,7 +50,7 @@ public:
 		TSharedRef<IHttpRequest, ESPMode::ThreadSafe> httpRequest = FHttpModule::Get().CreateRequest();
 		httpRequest->SetURL(StringUtils::STDStringToFString(url));
 		httpRequest->SetVerb("GET");
-		httpRequest->SetHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 OpenStormVR/1.0 (contact: info@example.com)");
+		httpRequest->SetHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 NEXRADSpatial/1.0 (https://github.com/T-roy/NEXRAD_Spatial)");
 		httpRequest->SetTimeout(timeout);
 		if(firstByte >= 0){
 			if(lastByte >= 0){
@@ -202,7 +207,7 @@ public:
 	// site to download from
 	std::string siteId = "KMKX";
 	// location to download from
-	std::string httpServerPath = "https://nomads.ncep.noaa.gov/pub/data/nccf/radar/nexrad_level2/";
+	std::string httpServerPath = "https://tgftp.nws.noaa.gov/data/radar/nexrad_level2/";
 	// file to get list of files from
 	std::string listFile = "dir.list";
 	// the list file does not update nearly as often as the last file so downloading the last file decreases latency

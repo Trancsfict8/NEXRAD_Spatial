@@ -8,52 +8,7 @@
 
 
 
-#ifdef UE_GAME
-#include "CoreMinimal.h"
-#include "Async/AsyncWork.h"
-class FUnrealAsyncTask : public FNonAbandonableTask {
-	friend class FAutoDeleteAsyncTask<FUnrealAsyncTask>;
-public:
-	std::function<void()> callback;
-
-	FUnrealAsyncTask(std::function<void()> functionToRun) {
-		callback = functionToRun;
-	}
-
-	void DoWork() {
-		callback();
-	}
-
-	FORCEINLINE TStatId GetStatId() const { RETURN_QUICK_DECLARE_CYCLE_STAT(FMyTaskName, STATGROUP_ThreadPoolAsyncTasks); }
-
-	static const TCHAR* Name()
-	{
-		return TEXT("AsyncTaskHelper");
-	}
-};
-
-
-void AsyncTaskRunner::Start(bool autoDeleteTask) {
-	if(running){
-		fprintf(stderr, "Error: tried to start AsyncTaskRunner multiple times\n");
-		return;
-	}
-	running = true;
-	finished = false;
-	canceled = false;
-	this->autoDelete = autoDeleteTask;
-	FAutoDeleteAsyncTask<FUnrealAsyncTask>* task = new FAutoDeleteAsyncTask<FUnrealAsyncTask>([this] {
-		InternalTask();
-	});
-	task->StartBackgroundTask();
-}
-#else
 #include <thread>
-#include <future>
-#include <vector>
-#include <chrono>
-std::vector<std::future<void>> pendingFutures;
-
 
 void AsyncTaskRunner::Start(bool autoDeleteTask) {
 	lock.lock();
@@ -67,19 +22,12 @@ void AsyncTaskRunner::Start(bool autoDeleteTask) {
 	canceled = false;
 	this->autoDelete = autoDeleteTask;
 	lock.unlock();
-	if(0){
-		std::future<void> future = std::async(std::launch::async, [this] {
-			InternalTask();
-		});
-		pendingFutures.push_back(std::move(future));
-	}else{
-		std::thread thread = std::thread([this] {
-			InternalTask();
-		});
-		thread.detach();
-	}
+
+	std::thread thread([this] {
+		InternalTask();
+	});
+	thread.detach();
 }
-#endif
 
 
 void AsyncTaskRunner::Start() {

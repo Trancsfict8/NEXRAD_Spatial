@@ -1531,6 +1531,7 @@ void ARadarViewPawn::InterrogateSpatialTriggered() {
 	Request->SetURL(TEXT("https://overpass-api.de/api/interpreter"));
 	Request->SetVerb(TEXT("POST"));
 	Request->SetHeader(TEXT("Content-Type"), TEXT("application/x-www-form-urlencoded"));
+	Request->SetHeader(TEXT("User-Agent"), TEXT("NEXRADSpatial/1.0 (https://github.com/T-roy/NEXRAD_Spatial)"));
 
 	FString Query = FString::Printf(TEXT("[out:json];way(around:150,%f,%f)[highway~\"^(primary|secondary|tertiary|trunk|motorway|residential)$\"][name];node(w)->.intersectionNodes;way(bn.intersectionNodes)[highway~\"^(primary|secondary|tertiary|trunk|motorway|residential)$\"][name];out tags;"), lat, lon);
 	Request->SetContentAsString(Query);

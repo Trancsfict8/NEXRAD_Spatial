@@ -2,11 +2,7 @@
 #include "Misc/Paths.h"
 #include "HAL/FileManager.h"
 
-#if PLATFORM_WINDOWS
-#include "Windows/WindowsPlatformProcess.h"
-#else
-#include "Linux/LinuxPlatformProcess.h"
-#endif
+#include "HAL/PlatformProcess.h"
 
 // #include "GenericPlatform/GenericPlatformProcess.h"
 

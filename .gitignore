@@ -25,3 +25,5 @@ tmp
 /tiles/*
 architecture.md
 .agents/
+/Plugins/OpenXR
+PXL_*.jpg
